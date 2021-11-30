@@ -1,0 +1,14 @@
+FROM mysql:latest
+
+RUN { \
+    echo '[mysqld]'; \
+    echo 'character-set-server=utf8'; \
+    echo 'collation-server=utf8_general_ci'; \
+    echo '[client]'; \
+    echo 'default-character-set=utf8'; \
+} > /etc/mysql/conf.d/charset.cnf
+
+COPY ./init-data/schema.sql /docker-entrypoint-initdb.d/schema.sql
+
+EXPOSE 3306
+CMD ["mysqld"]
