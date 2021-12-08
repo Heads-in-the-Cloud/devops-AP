@@ -1,0 +1,98 @@
+# Users Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users
+  labels:
+    app: users-microservice
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: users
+
+  # Pod Description
+  template:
+    metadata:
+      labels:
+        app: users
+    spec:
+      containers:
+      - name: users
+        image: utopia/users:1.0
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        envFrom:
+          - secretRef:
+              name: utopia-secrets
+---
+# Flights Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flights
+  labels:
+    app: flights-microservice
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: flights
+
+  # Pod Description
+  template:
+    metadata:
+      labels:
+        app: flights
+    spec:
+      containers:
+      - name: flights
+        image: utopia/flights:1.0
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        envFrom:
+          - secretRef:
+              name: utopia-secrets
+---
+# Bookings Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookings
+  labels:
+    app: bookings-microservice
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: bookings
+
+  # Pod Description
+  template:
+    metadata:
+      labels:
+        app: bookings
+    spec:
+      containers:
+      - name: bookings
+        image: utopia/bookings:1.0
+        resources:
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 8080
+        envFrom:
+          - secretRef:
+              name: utopia-secrets
