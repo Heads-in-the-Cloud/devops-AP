@@ -1,0 +1,33 @@
+version: "3.9"
+
+# x-aws-vpc: "vpc-25435e"
+
+services:
+  users:
+    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-users:latest
+    ports:
+      - '8080:8080'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+
+  flights:
+    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-flights:latest
+    ports:
+      - '8081:8081'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=8081
+
+  bookings:
+    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-bookings:latest
+    ports:
+      - '8082:8082'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=8082
