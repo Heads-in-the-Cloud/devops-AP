@@ -1,2 +1,3 @@
 # Ignores all .env files
 **/.env
+**/secrets.yml
