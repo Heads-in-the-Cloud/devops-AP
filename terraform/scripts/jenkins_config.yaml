@@ -1,0 +1,26 @@
+credentials:
+  system:
+    domainCredentials:
+    - credentials:
+      - aws:
+          id: "AWS-Key"
+          description: "AWS Login Credentials to use AWS CLI in Jenkins"
+          scope: GLOBAL
+          accessKey: "${AWS_ACCESS_KEY}"
+          secretKey: "${AWS_SECRET_ACCESS_KEY}"
+      - basicSSHUserPrivateKey:
+          id: "AWS-SSH"
+          description: "AWS SSH key to use AWS CLI in Jenkins"
+          privateKeySource:
+            directEntry:
+              privateKey: "{AQAAABAAAAWgOwTK4BTZrJOCbdNItiGt2lh0AG9bRfpf2PWQiRPQ1IAYiWjNW/rC30cgP2GQVrT8bbaBUbYheX680HztO+F+pAjx543YP0ydkTYnE8m+dtNYe6Ea5K7e4JG8QIk1wjpF1ffvaEkIDsrXMnN15m6Bck389+bcGrD4ZEnr3oCAYlUkSBr7rm28IlxLELSK5ZcwjyKbwcmdt0hJ7aW2p+ar3aWyWEZZmXJOpfbynlsbpzWsVo2oJQIy4A3ve6Ry2h7wc9ybCbbXAffb8/HvoLvPn212/meV9ehHeJe82+wk1MK7rqa1Y6zALCIqgjRv8Wnods5XVdEIaKigOOPVviWgBCsD0Icb1puTAAP61pxgSv8UMscYnf1W3WfPhAnDAKILSKGt9rDMzr3REvwoz1qIpeGaGhfT3YH/meD+U0MP5gA7ngNdhULift/H4yGNvoE2jCbSK1oBsmXozH9OHTtz+B0iucpJDEg3m26//Q1GU20sKEKdKp1NYGY9NdtTcji4NSXIA26Gdq0yzCI0cLXb0t177ikNNmC0LzaDqvAVqCqy65zb0MS3oYkYhNFLelCNoPUWV+V9p4JRiMH3csGRw4RgScvsB94VvGTH9v2y34etjNTi1uEYXzpLpgqbkdGb4S57VPGskooe229m+fLN1/irD6mDreKME5jhCG5dczsAlrnAz0K/1wmA/h5Gy1ySat2HZZgvYn34waJPpzTfPzaV4yunKcpSuZACCtb3A1CTsGexZ19L68FDYjqylhBMMH/d0ZM1eOp/xbSuZLLo9FayZu8JFvFT/OtDYMzRjQG52vvgu7Ta5S+R683rFm8LEqY+TwQGlCr9oVa/Y0Ji2N3Y264VP6ZmR8YVUJ6rps8jRchdkNUa2WE+52hLzF3vzF6kepRy2g1diXczW7eaIVWYsBnuCAGqpEIAEOj1xMwZyFs1VZ6mEXI5Z4KS4TSG1Xa3ocZmdcnyWd/4AkxaG3/SYE50Mxbjj+PWKmhI9J1sWIdGHuRI1aXbiibfwQ3e/Ice8EdHShX6Ux6ZRqhbk9RlmhHnPrckdxmPFHtuMKAYKBAcv9lD3Uj6X5On3SjPzTZdMXsSazlzebTsDtAODqPSqGnjm9t5+/L70FZ3FB30+2K11hqdq8sE+TaY7xxRk6nWn/At0q1f43vIn8HQSIMG7cbSxdxxbIM5pEDVkikxp9aGUIXANEpok2rWylkZUgzsc9Z5rb9HdOFbOdo1pD2oxfvNHn5oaaLSVjEkp0vwo9Kp8rk+ydtt+rTsyAJ+VyBwsxeH7YP0ZDxm7NFxkQQNkjVBzFvb5lwrvbogAFx64NsCQgt+9L6VfX7z0imQmBfI6vN3mH8u2q0S0mQ0tEvEY6Ee01bOGcR0gMs3KBJlNcL6liOJlailaF6h3XGlqMaaR41TwhjvD1nBAqMzNgSKH7ygVclZk2khDBdevMr5/w18EiaVvOCx70YN58YWXzl7rwWDVW19XNX1mc+AL+FHnMDvZf8J53jYWn6qPZPmpXFyZmoyHUgQXfKSyXIS6TbV7pNvvX6WG2CBAHohNGtte1zfXApTGTPaFpAKhKK6jL2Ps1XC6Zg0XzyLE6UzFIwHvbpJSaD9yMyu1ZHmaguYdUZVI07LyEebnm/8KUiFLeqWyyIFmZ8jmm2lCFn337xLDzLStaFGreosCidcv8O0ztu+JKNNY5IFzuJqNyhQzjUdFGMQ4u4Z2JCvTQG2vayouz5hSdEUR3O4fIIiDpe0cmxfAZrW5nciHPXYUbGpcZ+JrsEyzkjdZcfSTB3d0y/MlqA1PhHuFhMt3HCfPW99fIERGUEADI11p0oceH0NEcEFDg4y3OcFIPyWFwWLGZYp31mdO9r4/4DENSJEBWsgiVgUD2Y3QMTrmm7Ewfvut70zjuTz7SlpCpF5ElUeM97vVJ3FmHOqlObbHMtqwA==}"
+          scope: GLOBAL
+          username: "terraform"
+jenkins:
+  clouds:
+  - amazonEC2:
+      cloudName: "AWS-Cloud"
+      credentialsId: "AWS-Key"
+      region: "us-east-2"
+      sshKeysCredentialsId: "AWS-SSH"
+      useInstanceProfileForCredentials: false

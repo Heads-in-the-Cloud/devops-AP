@@ -4,30 +4,31 @@ version: "3.9"
 
 services:
   users:
-    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-users:latest
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-users:${USERS_TAG}
     ports:
-      - '8080:8080'
+      - '${USERS_PORT}:${USERS_PORT}'
     environment:
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=${USERS_PORT}
 
   flights:
-    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-flights:latest
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-flights:${FLIGHTS_TAG}
     ports:
-      - '8081:8081'
+      - '${FLIGHTS_PORT}:${FLIGHTS_PORT}'
     environment:
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - SERVER_PORT=8081
+      - SERVER_PORT=${FLIGHTS_PORT}
 
   bookings:
-    image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-bookings:latest
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-bookings:${BOOKINGS_TAG}
     ports:
-      - '8082:8082'
+      - '${BOOKINGS_PORT}:${BOOKINGS_PORT}'
     environment:
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
-      - SERVER_PORT=8082
+      - SERVER_PORT=${BOOKINGS_PORT}
