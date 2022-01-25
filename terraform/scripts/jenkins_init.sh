@@ -102,11 +102,19 @@ cat > ./jenkins_jobs/BookingsPipeline.xml <<'EOF'
 ${bookings_pipeline_XML}
 EOF
 
+cat > ./jenkins_jobs/ECSDeploy.xml <<'EOF'
+${ecs_deploy_XML}
+EOF
+
 cat ./jenkins_jobs/UsersPipeline.xml | java -jar jenkins-cli.jar create-job UsersPipeline
 cat ./jenkins_jobs/FlightsPipeline.xml | java -jar jenkins-cli.jar create-job FlightsPipeline
 cat ./jenkins_jobs/BookingsPipeline.xml | java -jar jenkins-cli.jar create-job BookingsPipeline
+cat ./jenkins_jobs/ECSDeploy.xml | java -jar jenkins-cli.jar create-job ECSDeploy
 
 sudo systemctl restart jenkins
 wait_for_jenkins
 
 rm "$JENKINS_HOME"/jenkins.yaml
+
+echo "Docker Compose Setup ----------"
+curl -L https://raw.githubusercontent.com/docker/compose-cli/main/scripts/install/install_linux.sh | sh

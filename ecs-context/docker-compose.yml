@@ -1,6 +1,6 @@
 version: "3.9"
 
-# x-aws-vpc: "vpc-25435e"
+x-aws-vpc: ${VPC_ID}
 
 services:
   users:

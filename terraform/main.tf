@@ -38,9 +38,10 @@ module "public" {
     aws_secret_access_key = var.aws_secret_access_key,
     aws_ssh_key           = var.aws_ssh_key,
 
-    users_pipeline_XML    = templatefile("./scripts/jenkins_job.xml", { microservice = "users", branch = var.jenkins_jobs_branch })
-    flights_pipeline_XML  = templatefile("./scripts/jenkins_job.xml", { microservice = "flights", branch = var.jenkins_jobs_branch })
-    bookings_pipeline_XML = templatefile("./scripts/jenkins_job.xml", { microservice = "bookings", branch = var.jenkins_jobs_branch })
+    users_pipeline_XML    = templatefile("./scripts/jenkins_job.xml", var.user_xml),
+    flights_pipeline_XML  = templatefile("./scripts/jenkins_job.xml", var.flights_xml),
+    bookings_pipeline_XML = templatefile("./scripts/jenkins_job.xml", var.bookings_xml),
+    ecs_deploy_XML        = templatefile("./scripts/jenkins_job.xml", var.devops_xml),
 
     plugins_list = file("./scripts/jenkins_plugins.txt")
   })

@@ -1,0 +1,76 @@
+#!/bin/groovy
+
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'Deploy',
+            description: 'Determines whether to deploy or to destroy the ECS cluster',
+            defaultValue: false
+        )
+    }
+
+    environment {
+        AWS = credentials('AWS-Key')
+        COMPOSE_PROJECT_NAME = "ap-utopia"
+
+        def aws_script = "aws secretsmanager get-secret-value --secret-id prod/Angel/ECS_Secrets --region us-east-2"
+        def output = sh(returnStdout: true, script: aws_script)
+        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+
+        def vpc_script = "aws ec2 describe-vpcs --region us-east-2 --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`AP_TF_VPC`]].VpcId' --output text"
+
+        VPC_ID = sh(returnStdout: true, script: vpc_script)
+
+        SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
+        MYSQL_USER = aws_secrets["MYSQL_USER"].toString()
+        MYSQL_PASSWORD = aws_secrets["MYSQL_PASSWORD"].toString()
+
+        AWS_USER_ID = aws_secrets["AWS_USER_ID"].toString()
+        AWS_REGION = aws_secrets["AWS_REGION"].toString()
+
+        USERS_TAG = aws_secrets["USERS_TAG"].toString()
+        FLIGHTS_TAG = aws_secrets["FLIGHTS_TAG"].toString()
+        BOOKINGS_TAG = aws_secrets["BOOKINGS_TAG"].toString()
+
+        USERS_PORT = aws_secrets["USERS_PORT"].toString()
+        FLIGHTS_PORT = aws_secrets["FLIGHTS_PORT"].toString()
+        BOOKINGS_PORT = aws_secrets["BOOKINGS_PORT"].toString()
+
+        DOCKER_CMD = "/usr/local/bin/docker"
+    }
+
+    stages {
+        stage('Setup Docker Context') { steps{ script{
+            def status = sh(returnStatus: true, script: '$DOCKER_CMD context ls | grep aws_context')
+            if (status != 0) {
+                echo(message: 'AWS context does not exist!')
+                sh(script: '$DOCKER_CMD context create ecs --from-env aws_context')
+            }
+
+            sh(script: '$DOCKER_CMD context use aws_context')
+        }}}
+        stage('GitHub Fetch') { steps{
+            echo(message: 'GitHub Fetch!')
+            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+        }}
+        stage('Deploy ECS') { when { expression { params.Deploy }}
+            steps {
+            dir(path: './ecs-context') {
+                sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
+                sh(script: '$DOCKER_CMD compose up')
+            }
+        }}
+        stage('Takedown ECS') { when { expression { !params.Deploy }}
+            steps {
+            dir(path: './ecs-context') {
+                sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
+                sh(script: '$DOCKER_CMD compose down')
+            }
+        }}
+    }
+    post { always {
+        sh(script: '$DOCKER_CMD context use default')
+    }}
+}

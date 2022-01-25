@@ -57,8 +57,7 @@ variable "aws_ssh_key" {
   sensitive   = true
 }
 
-variable "jenkins_jobs_branch" {
-  type        = string
-  description = "Git branch used in the jenkins pipelines"
-  sensitive   = true
-}
+variable "user_xml" { type = map(string) }
+variable "flights_xml" { type = map(string) }
+variable "bookings_xml" { type = map(string) }
+variable "devops_xml" { type = map(string) }
