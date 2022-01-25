@@ -1,61 +1,112 @@
 #!/bin/bash
-"this lock!" > lock.txt
 
+# Set the Promt
+echo "PS1='\[\033]0;$TITLEPREFIX:$PWD\007\]\n\[\033[32m\]\u@\h \[\033[35m\]$MSYSTEM \[\033[33m\]\w\[\033[36m\]\[\033[0m\]\n$ '" | sudo tee /etc/profile.d/sh.local
+cd /home/ec2-user
+
+echo "sudo cloud-init status --wait" >> .bashrc
+
+function wait_for_jenkins () {
+    echo "-- -- -- Waiting on Jenkins to boot up"
+
+    STATUS_CODE="$(curl -s -o /dev/null -I -w "%%{http_code}" http://localhost:8080)"
+    while [ $STATUS_CODE -eq 503 ] || [ $STATUS_CODE -eq 000 ]; do
+        let STATUS_CODE="$(curl -s -o /dev/null -I -w "%%{http_code}" http://localhost:8080)"
+        printf .
+        sleep 1
+    done
+
+    echo
+    echo "-- -- -- Jenkins is running"
+}
+
+echo "Installs dependencies ----------"
+sudo amazon-linux-extras install epel -y
 sudo yum update -y
+
+echo "Installing Jenkins ----------"
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
 sudo yum upgrade -y
+sudo yum install jenkins java-1.8.0-openjdk-devel git docker -y
 
-sudo yum install docker -y
-
+echo "Services ----------"
 sudo systemctl daemon-reload
 sudo systemctl start docker
+sudo systemctl start jenkins
+
+echo "Sleeps for a bit to setup everything ----------"
+wait_for_jenkins
+
 sudo usermod -a -G docker jenkins
 
+echo "Remove Setup Wizard ----------"
+JAVA_OPTIONS='JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
+REGEX_PAT='JENKINS_JAVA_OPTIONS=.*'
+
+sudo cat /etc/sysconfig/jenkins | sed 's/'"$REGEX_PAT"'/'"$JAVA_OPTIONS"'/1' | sudo tee ./somefile.txt >/dev/null
+cat ./somefile.txt | sudo tee /etc/sysconfig/jenkins >/dev/null
+rm ./somefile.txt
+
+sudo systemctl restart jenkins
+wait_for_jenkins
+
+echo "Get Jenkins CLI ----------"
 wget http://localhost:8080/jnlpJars/jenkins-cli.jar
 
-echo Exporting Environment Variables ----------
+echo "Exporting Environment Variables ----------"
 export AWS_ACCESS_KEY=${aws_access_key}
 export AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
 
-export JENKINS_URL=http://localhost:8080
 export JENKINS_USER_ID=${jenkins_user_id}
 export JENKINS_API_TOKEN=${jenkins_api_token}
+export JENKINS_PASSWORD=$(echo -n ${jenkins_password} | base64 -d)
+
+export JENKINS_URL=http://localhost:8080
 export JENKINS_HOME="/var/lib/jenkins"
-export CASC_JENKINS_CONFIG="/var/lib/jenkins/configs"
 
-mkdir "$JENKINS_HOME"/configs
+echo 'Installing Plugins ----------'
+PLUGINS_LIST="
+${plugins_list}
+"
 
-echo Installing Plugins ----------
-java -jar jenkins-cli.jar install-plugin pipeline-utility-steps -deploy
-java -jar jenkins-cli.jar install-plugin ec2 -deploy
-java -jar jenkins-cli.jar install-plugin amazon-ecr -deploy
-java -jar jenkins-cli.jar install-plugin configuration-as-code -deploy
+sleep 10
+for plugin in $${PLUGINS_LIST};
+do
+    java -jar jenkins-cli.jar install-plugin "$${plugin//[$'\t\r\n']}" -deploy
+done
 
-echo Plugins are updating ----------
-UPDATE_LIST=$( java -jar jenkins-cli.jar list-plugins | grep -e ')$' | awk '{ print $1 }' | tr '\n' ' ' )
-if [ -n "$${UPDATE_LIST}" ]; then
-    for plugin in $${UPDATE_LIST};
-    do
-        echo Updating plugin: $plugin
-        java -jar jenkins-cli.jar install-plugin -deploy $plugin
-    done
+java -jar jenkins-cli.jar safe-restart
 
-    java -jar jenkins-cli.jar safe-restart
-fi
-
-echo Creating Credentials YAML ----------
+echo "Creating Config YAML ----------"
 cat > "$JENKINS_HOME"/jenkins.yaml <<EOF
 ${jenkins_config}
 EOF
 
-echo AWS_ACCESS_KEY=$AWS_ACCESS_KEY | sudo tee -a /etc/profile.d/sh.local
-echo AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY | sudo tee -a /etc/profile.d/sh.local
+sudo systemctl restart jenkins
+wait_for_jenkins
 
-echo JENKINS_URL=http://localhost:8080 | sudo tee -a /etc/profile.d/sh.local
-echo JENKINS_USER_ID=$JENKINS_USER_ID | sudo tee -a /etc/profile.d/sh.local
-echo JENKINS_API_TOKEN=$JENKINS_API_TOKEN | sudo tee -a /etc/profile.d/sh.local
-echo JENKINS_HOME=$JENKINS_HOME | sudo tee -a /etc/profile.d/sh.local
-echo CASC_JENKINS_CONFIG=$CASC_JENKINS_CONFIG | sudo tee -a /etc/profile.d/sh.local
+echo "Creating Job XML files ----------"
+mkdir "$JENKINS_HOME"/configs
+mkdir ./jenkins_jobs
+
+cat > ./jenkins_jobs/UsersPipeline.xml <<'EOF'
+${users_pipeline_XML}
+EOF
+
+cat > ./jenkins_jobs/FlightsPipeline.xml <<'EOF'
+${flights_pipeline_XML}
+EOF
+
+cat > ./jenkins_jobs/BookingsPipeline.xml <<'EOF'
+${bookings_pipeline_XML}
+EOF
+
+cat ./jenkins_jobs/UsersPipeline.xml | java -jar jenkins-cli.jar create-job UsersPipeline
+cat ./jenkins_jobs/FlightsPipeline.xml | java -jar jenkins-cli.jar create-job FlightsPipeline
+cat ./jenkins_jobs/BookingsPipeline.xml | java -jar jenkins-cli.jar create-job BookingsPipeline
 
 sudo systemctl restart jenkins
+wait_for_jenkins
 
-rm lock.txt
+rm "$JENKINS_HOME"/jenkins.yaml

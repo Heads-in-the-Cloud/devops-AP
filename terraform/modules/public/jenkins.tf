@@ -9,24 +9,8 @@ resource "aws_network_interface" "jenkins" {
   tags = { Name = "AP_TF_JenkinsNIC" }
 }
 
-# resource "aws_instance" "jenkins_init" {
-#   ami           = "ami-002068ed284fb165b"
-#   instance_type = "t2.micro"
-#   key_name      = "terraform"
-
-#   network_interface {
-#     network_interface_id = aws_network_interface.jenkins_nic.id
-#     device_index         = 0
-#   }
-
-#   user_data = file("${path.module}/jenkins_init.sh")
-#   availability_zone      = var.availability_zone
-
-#   tags = { Name = "AP_TF_Jenkins" }
-# }
-
 resource "aws_instance" "jenkins" {
-  ami           = "ami-0337ebef10bb8ae1c"
+  ami           = "ami-002068ed284fb165b"
   instance_type = "t2.micro"
   key_name      = "terraform"
   count         = var.enable_jenkins ? 1 : 0

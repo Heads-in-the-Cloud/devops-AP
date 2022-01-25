@@ -1,56 +1,3 @@
-# Input variables
-variable "vpc_cidr" { type = string }
-variable "public_subnet" { type = string }
-variable "private_subnet" { type = string }
-
-variable "bastion_ip" { type = string }
-variable "nat_ip" { type = string }
-variable "jenkins_ip" { type = string }
-
-variable "enable_bastion" { type = bool }
-variable "enable_nat" { type = bool }
-variable "enable_jenkins" { type = bool }
-variable "enable_eks_cluster" { type = bool }
-
-variable "availability_zone" { type = string }
-variable "jenkins_startup" { type = string }
-
-variable "jenkins_user_id" {
-  type        = string
-  description = "Login id for the User id in Jenkins CLI"
-  sensitive   = true
-}
-
-variable "jenkins_api_token" {
-  type        = string
-  description = "API Token for the User id in Jenkins CLI"
-  sensitive   = true
-}
-
-variable "aws_access_key" {
-  type        = string
-  description = "API Token for the User id in Jenkins CLI"
-  sensitive   = true
-}
-
-variable "aws_secret_access_key" {
-  type        = string
-  description = "API Token for the User id in Jenkins CLI"
-  sensitive   = true
-}
-
-variable "aws_ssh_key" {
-  type        = string
-  description = "API Token for the User id in Jenkins CLI"
-  sensitive   = true
-}
-
-variable "vnc_password" {
-  type        = string
-  description = "Password used for the bastion server's vnc server."
-  sensitive   = true
-}
-
 # Modules
 module "network" {
   # Module variables
@@ -82,12 +29,20 @@ module "public" {
   vnc_password      = var.vnc_password
   availability_zone = var.availability_zone
   jenkins_startup = templatefile(var.jenkins_startup, {
-    jenkins_user_id       = var.jenkins_user_id,
-    jenkins_api_token     = var.jenkins_api_token,
-    jenkins_config        = file("./scripts/jenkins_config.yaml"),
+    jenkins_user_id   = var.jenkins_user_id,
+    jenkins_api_token = var.jenkins_api_token,
+    jenkins_password  = var.jenkins_password
+    jenkins_config    = file("./scripts/jenkins_config.yaml"),
+
     aws_access_key        = var.aws_access_key,
     aws_secret_access_key = var.aws_secret_access_key,
-    aws_ssh_key           = var.aws_ssh_key
+    aws_ssh_key           = var.aws_ssh_key,
+
+    users_pipeline_XML    = templatefile("./scripts/jenkins_job.xml", { microservice = "users", branch = var.jenkins_jobs_branch })
+    flights_pipeline_XML  = templatefile("./scripts/jenkins_job.xml", { microservice = "flights", branch = var.jenkins_jobs_branch })
+    bookings_pipeline_XML = templatefile("./scripts/jenkins_job.xml", { microservice = "bookings", branch = var.jenkins_jobs_branch })
+
+    plugins_list = file("./scripts/jenkins_plugins.txt")
   })
 
   # Resource Enablers

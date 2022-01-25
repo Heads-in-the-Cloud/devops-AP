@@ -44,7 +44,7 @@ resource "aws_subnet" "private_subnet" {
 
   availability_zone = var.availability_zone
 
-  tags = { Name = "AP_TF_PublicSubnet" }
+  tags = { Name = "AP_TF_PrivateSubnet" }
 }
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.utopia_vpc.id
