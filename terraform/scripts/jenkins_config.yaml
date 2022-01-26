@@ -18,6 +18,36 @@ credentials:
           username: "terraform"
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
+  views:
+  - list:
+      name: "Services"
+      columns:
+      - "status"
+      - "weather"
+      - "jobName"
+      - "lastSuccess"
+      - "lastFailure"
+      - "lastDuration"
+      - "buildButton"
+      - "descriptionColumn"
+      jobNames:
+      - "BookingsPipeline"
+      - "FlightsPipeline"
+      - "UsersPipeline"
+  - list:
+      name: "Deployments"
+      columns:
+      - "status"
+      - "weather"
+      - "jobName"
+      - "lastSuccess"
+      - "lastFailure"
+      - "lastDuration"
+      - "buildButton"
+      - "descriptionColumn"
+      jobNames:
+      - "ECSDeploy"
+
   clouds:
   - amazonEC2:
       cloudName: "AWS-Cloud"

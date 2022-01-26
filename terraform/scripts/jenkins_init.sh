@@ -89,6 +89,7 @@ wait_for_jenkins
 echo "Creating Job XML files ----------"
 mkdir "$JENKINS_HOME"/configs
 mkdir ./jenkins_jobs
+mkdir ./jenkins_views
 
 cat > ./jenkins_jobs/UsersPipeline.xml <<'EOF'
 ${users_pipeline_XML}

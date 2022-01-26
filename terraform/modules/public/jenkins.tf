@@ -1,6 +1,6 @@
 # jenkins instance
 resource "aws_network_interface" "jenkins" {
-  subnet_id   = var.public_subnet
+  subnet_id   = var.public_subnet[0]
   private_ips = [var.jenkins_ip]
   count       = var.enable_jenkins ? 1 : 0
 
@@ -22,7 +22,7 @@ resource "aws_instance" "jenkins" {
 
   user_data = var.jenkins_startup
 
-  availability_zone = var.availability_zone
+  availability_zone = var.availability_zone[0]
 
   tags = { Name = "AP_TF_Jenkins" }
 }

@@ -1,9 +1,10 @@
 # References
 variable "utopia_vpc_id" { type = string }
-variable "public_subnet" { type = string }
+
+variable "public_subnet" { type = list(string) }
 
 # Inputs
-variable "availability_zone" { type = string }
+variable "availability_zone" { type = list(string) }
 
 variable "jenkins_ip" { type = string }
 variable "bastion_ip" { type = string }

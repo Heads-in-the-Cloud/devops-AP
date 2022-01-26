@@ -1,6 +1,6 @@
 # NAT network
 resource "aws_network_interface" "nat_nic" {
-  subnet_id       = var.public_subnet
+  subnet_id       = var.public_subnet[0]
   private_ips     = [ var.nat_ip ]
   count           = var.enable_nat ? 1 : 0
 

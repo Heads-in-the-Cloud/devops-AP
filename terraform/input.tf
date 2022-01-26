@@ -1,7 +1,8 @@
 # Input variables
 variable "vpc_cidr" { type = string }
-variable "public_subnet" { type = string }
-variable "private_subnet" { type = string }
+
+variable "public_subnet" { type = list(string) }
+variable "private_subnet" { type = list(string) }
 
 variable "bastion_ip" { type = string }
 variable "nat_ip" { type = string }
@@ -12,7 +13,8 @@ variable "enable_bastion" { type = bool }
 variable "enable_nat" { type = bool }
 variable "enable_eks_cluster" { type = bool }
 
-variable "availability_zone" { type = string }
+variable "availability_zone" { type = list(string) }
+
 variable "jenkins_startup" { type = string }
 
 variable "vnc_password" {

@@ -21,7 +21,8 @@ pipeline {
 
         def vpc_script = "aws ec2 describe-vpcs --region us-east-2 --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`AP_TF_VPC`]].VpcId' --output text"
 
-        VPC_ID = sh(returnStdout: true, script: vpc_script)
+        // VPC_ID = sh(returnStdout: true, script: vpc_script)  // Terraform Created VPC
+        VPC_ID = "vpc-0eac5787af2a09c4f"                        // Default VPC
 
         SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
         MYSQL_USER = aws_secrets["MYSQL_USER"].toString()
@@ -50,6 +51,7 @@ pipeline {
             }
 
             sh(script: '$DOCKER_CMD context use aws_context')
+            sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
         }}}
         stage('GitHub Fetch') { steps{
             echo(message: 'GitHub Fetch!')
@@ -58,14 +60,12 @@ pipeline {
         stage('Deploy ECS') { when { expression { params.Deploy }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
                 sh(script: '$DOCKER_CMD compose up')
             }
         }}
         stage('Takedown ECS') { when { expression { !params.Deploy }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
                 sh(script: '$DOCKER_CMD compose down')
             }
         }}

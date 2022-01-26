@@ -6,8 +6,9 @@ module "network" {
   # Variables
   cidr_block        = var.vpc_cidr
   availability_zone = var.availability_zone
-  public_subnet     = var.public_subnet
-  private_subnet    = var.private_subnet
+
+  public_subnet   = var.public_subnet
+  private_subnet = var.private_subnet
 
   # Resource Enablers
   enable_private = var.enable_nat
@@ -28,6 +29,7 @@ module "public" {
   # Variables
   vnc_password      = var.vnc_password
   availability_zone = var.availability_zone
+
   jenkins_startup = templatefile(var.jenkins_startup, {
     jenkins_user_id   = var.jenkins_user_id,
     jenkins_api_token = var.jenkins_api_token,
@@ -53,7 +55,7 @@ module "public" {
 
   # References
   utopia_vpc_id = module.network.utopia_vpc.id
-  public_subnet = module.network.public_subnet.id
+  public_subnet = module.network.public_subnet[*].id
 }
 
 module "private" {
@@ -62,7 +64,7 @@ module "private" {
   count  = var.enable_nat ? 1 : 0
 
   # References
-  utopia_vpc_id  = module.network.utopia_vpc.id
-  private_subnet = module.network.private_subnet.id
-  bastion_ip     = module.public.bastion_ip
+  utopia_vpc_id   = module.network.utopia_vpc.id
+  private_subnet  = module.network.private_subnet.id
+  bastion_ip      = module.public.bastion_ip
 }

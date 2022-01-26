@@ -12,17 +12,19 @@ resource "aws_internet_gateway" "utopia_gateway" {
 # Public Subnets
 resource "aws_subnet" "public_subnet" {
   vpc_id     = aws_vpc.utopia_vpc.id
-  cidr_block = var.public_subnet
+  cidr_block = var.public_subnet[count.index]
   depends_on = [aws_vpc.utopia_vpc]
+  count      = 2
 
   map_public_ip_on_launch = true
 
-  availability_zone = var.availability_zone
+  availability_zone = var.availability_zone[count.index]
 
   tags = { Name = "AP_TF_PublicSubnet" }
 }
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.utopia_vpc.id
+  count  = 2
 
   route {
     cidr_block = "0.0.0.0/0"
@@ -32,17 +34,19 @@ resource "aws_route_table" "public_rt" {
   tags = { Name = "AP_TF_BastionRouteTable" }
 }
 resource "aws_route_table_association" "public_rt_assoc" {
-  subnet_id      = aws_subnet.public_subnet.id
-  route_table_id = aws_route_table.public_rt.id
+  subnet_id      = aws_subnet.public_subnet[count.index].id
+  route_table_id = aws_route_table.public_rt[count.index].id
+
+  count = 2
 }
 
 # Private Subnets
 resource "aws_subnet" "private_subnet" {
   vpc_id     = aws_vpc.utopia_vpc.id
-  cidr_block = var.private_subnet
+  cidr_block = var.private_subnet[0]
   depends_on = [aws_vpc.utopia_vpc]
 
-  availability_zone = var.availability_zone
+  availability_zone = var.availability_zone[0]
 
   tags = { Name = "AP_TF_PrivateSubnet" }
 }

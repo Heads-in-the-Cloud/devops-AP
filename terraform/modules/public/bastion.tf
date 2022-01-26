@@ -1,6 +1,6 @@
 # bastion network
 resource "aws_network_interface" "bastion" {
-  subnet_id   = var.public_subnet
+  subnet_id   = var.public_subnet[0]
   private_ips = [var.bastion_ip]
   count         = var.enable_bastion ? 1 : 0
 
