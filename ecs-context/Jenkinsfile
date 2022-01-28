@@ -9,11 +9,6 @@ pipeline {
             description: 'Determines whether to deploy or to destroy the ECS cluster',
             defaultValue: false
         )
-        choice(
-            name: 'Services',
-            description: 'Determines which services to deploy in the cluster.',
-            choices: [ 'all', 'users', 'flights', 'bookings' ],
-        )
     }
 
     environment {
@@ -64,16 +59,10 @@ pipeline {
         }}
 
         // Conditional deployment
-        stage('Deploy ECS') { when { expression { params.Deploy && params.Services == 'all' }}
+        stage('Deploy ECS') { when { expression { params.Deploy }}
             steps {
             dir(path: './ecs-context') {
                 sh(script: "$DOCKER_CMD compose up")
-            }
-        }}
-        stage('Deploy A Service') { when { expression { params.Deploy && params.Services != 'all' }}
-            steps {
-            dir(path: './ecs-context') {
-                sh(script: "$DOCKER_CMD compose up ${params.Services}")
             }
         }}
 
