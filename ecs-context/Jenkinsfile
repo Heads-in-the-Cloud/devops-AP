@@ -9,17 +9,23 @@ pipeline {
             description: 'Determines whether to deploy or to destroy the ECS cluster',
             defaultValue: false
         )
+        choice(
+            name: 'Services',
+            description: 'Determines which services to deploy in the cluster.',
+            choices: [ 'all', 'users', 'flights', 'bookings' ],
+        )
     }
 
     environment {
         AWS = credentials('AWS-Key')
+        AWS_REGION = credentials('AWS-Region')
         COMPOSE_PROJECT_NAME = "ap-utopia"
 
         def aws_script = "aws secretsmanager get-secret-value --secret-id prod/Angel/ECS_Secrets --region us-east-2"
         def output = sh(returnStdout: true, script: aws_script)
         def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
 
-        def vpc_script = "aws ec2 describe-vpcs --region us-east-2 --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`AP_TF_VPC`]].VpcId' --output text"
+        def vpc_script = "aws ec2 describe-vpcs --region $AWS_REGION --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`AP_TF_VPC`]].VpcId' --output text"
 
         // VPC_ID = sh(returnStdout: true, script: vpc_script)  // Terraform Created VPC
         VPC_ID = "vpc-0eac5787af2a09c4f"                        // Default VPC
@@ -57,12 +63,22 @@ pipeline {
             echo(message: 'GitHub Fetch!')
             git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
         }}
-        stage('Deploy ECS') { when { expression { params.Deploy }}
+
+        // Conditional deployment
+        stage('Deploy ECS') { when { expression { params.Deploy && params.Services == 'all' }}
             steps {
             dir(path: './ecs-context') {
                 sh(script: '$DOCKER_CMD compose up')
             }
         }}
+        stage('Deploy A Service') { when { expression { params.Deploy && params.Services != 'all' }}
+            steps {
+            dir(path: './ecs-context') {
+                sh(script: '$DOCKER_CMD compose up $params.Services')
+            }
+        }}
+
+        // Destroy ECS
         stage('Takedown ECS') { when { expression { !params.Deploy }}
             steps {
             dir(path: './ecs-context') {
