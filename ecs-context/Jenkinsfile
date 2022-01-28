@@ -35,7 +35,6 @@ pipeline {
         MYSQL_PASSWORD = aws_secrets["MYSQL_PASSWORD"].toString()
 
         AWS_USER_ID = aws_secrets["AWS_USER_ID"].toString()
-        AWS_REGION = aws_secrets["AWS_REGION"].toString()
 
         USERS_TAG = aws_secrets["USERS_TAG"].toString()
         FLIGHTS_TAG = aws_secrets["FLIGHTS_TAG"].toString()
