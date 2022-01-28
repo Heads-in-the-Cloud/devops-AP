@@ -73,7 +73,7 @@ pipeline {
         stage('Deploy A Service') { when { expression { params.Deploy && params.Services != 'all' }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: '$DOCKER_CMD compose up $params.Services')
+                sh(script: '$DOCKER_CMD compose up ${params.Services}')
             }
         }}
 
