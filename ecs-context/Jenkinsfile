@@ -52,7 +52,7 @@ pipeline {
             def status = sh(returnStatus: true, script: '$DOCKER_CMD context ls | grep aws_context')
             if (status != 0) {
                 echo(message: 'AWS context does not exist!')
-                sh(script: '$DOCKER_CMD context create ecs --from-env aws_context')
+                sh(script: "$DOCKER_CMD context create ecs --from-env aws_context")
             }
 
             sh(script: '$DOCKER_CMD context use aws_context')
@@ -67,13 +67,13 @@ pipeline {
         stage('Deploy ECS') { when { expression { params.Deploy && params.Services == 'all' }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: '$DOCKER_CMD compose up')
+                sh(script: "$DOCKER_CMD compose up")
             }
         }}
         stage('Deploy A Service') { when { expression { params.Deploy && params.Services != 'all' }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: '$DOCKER_CMD compose up ${params.Services}')
+                sh(script: "$DOCKER_CMD compose up ${params.Services}")
             }
         }}
 
@@ -81,11 +81,11 @@ pipeline {
         stage('Takedown ECS') { when { expression { !params.Deploy }}
             steps {
             dir(path: './ecs-context') {
-                sh(script: '$DOCKER_CMD compose down')
+                sh(script: "$DOCKER_CMD compose down")
             }
         }}
     }
     post { always {
-        sh(script: '$DOCKER_CMD context use default')
+        sh(script: "$DOCKER_CMD context use default")
     }}
 }
