@@ -1,0 +1,90 @@
+#!/bin/groovy
+
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'Deploy',
+            description: 'Determines whether to deploy or to destroy the EKS cluster',
+            defaultValue: false
+        )
+    }
+
+    environment {
+        AWS = credentials('AWS-Key')
+        AWS_REGION = credentials('AWS-Region')
+
+        CLUSTER_NAME="ap-eks-cluster"
+
+        NODE_TYPE="t2.micro"
+        NODE_COUNT=4
+        NODE_GROUP="linux-nodes"
+
+        EKSCTL_CMD = "/usr/local/bin/eksctl"
+
+        KMS_KEY = "arn:aws:kms:us-east-2:902316339693:key/14e5926d-ca50-4b73-8501-4b898d93e7d7"
+        KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
+    }
+
+    stages {
+        stage('GitHub Fetch') { steps{
+            echo(message: 'GitHub Fetch!')
+            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+        }}
+
+        // Conditional deployment
+        stage('Deploy EKS') { when { expression { params.Deploy }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 0) {
+                    error(message: 'EKS Cluster already exists!')
+                }
+            }
+
+            dir(path: './eks-context') {
+                echo(message: 'Deploying Messages!')
+                sh(script: "$EKSCTL_CMD create cluster --name $CLUSTER_NAME --region $AWS_REGION --nodegroup-name $NODE_GROUP --node-type $NODE_TYPE --nodes $NODE_COUNT")
+                sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+
+                // Applying NGINX Ingress Configs
+                sh(script: 'kubectl apply -f nginx_ingress/ns-and-sa.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/default-server-secret.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/nginx-config.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/ingress-class.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/rbac.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/nginx-ingress.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/loadbalancer-aws-elb.yaml')
+
+                // Apply Secrets
+                sh(script: "$KMS_DECRYPT ./secrets.yml.encrypted ./secrets.yml")
+
+                // Launch Microservices
+                sh(script: 'kubectl apply -f secrets.yml')
+                sh(script: 'kubectl apply -f deployments.yml')
+                sh(script: 'kubectl apply -f services.yml')
+                sh(script: 'kubectl apply -f ingress.yml')
+            }
+        }}
+
+        // Destroy EKS
+        stage('Takedown EKS') { when { expression { !params.Deploy }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'EKS Cluster does not exist!')
+                }
+            }
+
+            dir(path: './eks-context') {
+                echo(message: 'Taking Down Messages!')
+                sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
+            }
+        }}
+    }
+    post { always {
+        echo(message: 'Wow!')
+    }}
+}

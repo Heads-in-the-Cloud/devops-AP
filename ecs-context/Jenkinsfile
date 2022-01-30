@@ -14,9 +14,10 @@ pipeline {
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
+        SECRET_URL = credentials('AWS-ECS-Secrets')
         COMPOSE_PROJECT_NAME = "ap-utopia"
 
-        def aws_script = "aws secretsmanager get-secret-value --secret-id prod/Angel/ECS_Secrets --region us-east-2"
+        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
         def output = sh(returnStdout: true, script: aws_script)
         def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
 

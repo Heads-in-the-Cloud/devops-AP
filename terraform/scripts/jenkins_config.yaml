@@ -16,6 +16,18 @@ credentials:
               privateKey: ${AWS_SSH_KEY}
           scope: GLOBAL
           username: "terraform"
+      - string:
+          id: "AWS-Region"
+          scope: GLOBAL
+          secret: ${AWS_REGION}
+      - string:
+          id: "AWS-Services-Secret"
+          scope: GLOBAL
+          secret: ${AWS_SERVICES_SECRET}
+      - string:
+          id: "AWS-ECS-Secrets"
+          scope: GLOBAL
+          secret: ${AWS_ECS_SECRET}
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
   views:
@@ -47,6 +59,7 @@ jenkins:
       - "descriptionColumn"
       jobNames:
       - "ECSDeploy"
+      - "EKSDeploy"
 
   clouds:
   - amazonEC2:

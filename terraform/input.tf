@@ -59,7 +59,29 @@ variable "aws_ssh_key" {
   sensitive   = true
 }
 
+variable "aws_secret_region" {
+  type        = string
+  description = "AWS ssh key used to access the instance"
+  sensitive   = true
+}
+variable "aws_secret_services" {
+  type        = string
+  description = "AWS ssh key used to access the instance"
+  sensitive   = true
+}
+variable "aws_ecs_secret" {
+  type        = string
+  description = "AWS ssh key used to access the instance"
+  sensitive   = true
+}
+
+variable "jenkins_s3_bucket" { type = string }
+variable "sns_topic" { type = string }
+variable "aws_user_id" { type = string }
+
 variable "user_xml" { type = map(string) }
 variable "flights_xml" { type = map(string) }
 variable "bookings_xml" { type = map(string) }
-variable "devops_xml" { type = map(string) }
+
+variable "ecs_devops_xml" { type = map(string) }
+variable "eks_devops_xml" { type = map(string) }

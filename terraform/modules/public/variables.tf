@@ -11,7 +11,10 @@ variable "bastion_ip" { type = string }
 variable "nat_ip" { type = string }
 
 variable "vnc_password" { type = string }
+
 variable "jenkins_startup" { type = string }
+variable "jenkins_config" { type = map(string) }
+variable "s3_bucket_name" { type = string }
 
 variable "enable_bastion" { type = bool }
 variable "enable_nat" { type = bool }
