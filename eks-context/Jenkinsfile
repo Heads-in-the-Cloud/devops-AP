@@ -27,13 +27,13 @@ pipeline {
 
         CLUSTER_NAME = "ap-eks-cluster"
 
-        NODE_TYPE = aws_secrets['NODE_TYPE']
-        NODE_COUNT = aws_secrets['NODE_COUNT']
-        NODE_GROUP = aws_secrets['NODE_GROUP']
+        NODE_TYPE = aws_secrets['NODE_TYPE'].toString()
+        NODE_COUNT = aws_secrets['NODE_COUNT'].toString()
+        NODE_GROUP = aws_secrets['NODE_GROUP'].toString()
 
         EKSCTL_CMD = "/usr/local/bin/eksctl"
 
-        KMS_KEY = aws_secrets['KMS_KEY']
+        KMS_KEY = aws_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
     }
 
