@@ -98,6 +98,14 @@ resource "aws_iam_role_policy" "jenkins" {
       Action  = ["sns:Publish"],
       Effect = "Allow",
       Resource = "*"
+    }, {
+      Action = ["ec2:DescribeTags"],
+      Effect = "Allow",
+      Resource = "*"
+    }, {
+      Action = ["route53:ChangeResourceRecordSets"],
+      Effect = "Allow",
+      Resource = "arn:aws:route53:::hostedzone/HOSTED-ZONE-ID"
     }],
   })
 }
@@ -112,4 +120,13 @@ resource "aws_s3_bucket_object" "jenkins_jobs" {
   key      = each.key
   bucket   = aws_s3_bucket.jenkins_config.id
   content  = each.value
+}
+
+# jenkins route 53 url
+resource "aws_route53_record" "jenkins" {
+  zone_id = var.route53_zone_id
+  name = var.route53_url
+  type = "A"
+  ttl = "300"
+  records = [ aws_instance.jenkins[0].public_ip ]
 }

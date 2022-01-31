@@ -9,7 +9,7 @@ keyArn=$1
 inputFile=$2
 outputDir=$3
 
-aws-encryption-cli --encrypt \
+/usr/local/bin/aws-encryption-cli --encrypt \
 --input $inputFile \
 --wrapping-keys key=$keyArn \
 --metadata-output ~/metadata \

@@ -76,6 +76,7 @@ export AWS_SECRET_ACCESS_KEY=${aws_secret_access_key}
 export AWS_REGION=${aws_secret_region}
 export AWS_SERVICES_SECRET=${aws_secret_services}
 export AWS_ECS_SECRET=${aws_ecs_secret}
+export AWS_EKS_SECRET=${aws_eks_secret}
 
 export S3_BUCKET=${s3_bucket}
 

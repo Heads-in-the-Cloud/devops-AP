@@ -61,19 +61,27 @@ variable "aws_ssh_key" {
 
 variable "aws_secret_region" {
   type        = string
-  description = "AWS ssh key used to access the instance"
+  description = "AWS Region"
   sensitive   = true
 }
 variable "aws_secret_services" {
   type        = string
-  description = "AWS ssh key used to access the instance"
+  description = "AWS Credentials url used in microservices"
   sensitive   = true
 }
 variable "aws_ecs_secret" {
   type        = string
-  description = "AWS ssh key used to access the instance"
+  description = "AWS Credentials url used in ECS"
   sensitive   = true
 }
+variable "aws_eks_secret" {
+  type        = string
+  description = "AWS Credentials url used in EKS"
+  sensitive   = true
+}
+
+variable "route53_zone_id" { type = string }
+variable "route53_url" { type = string }
 
 variable "jenkins_s3_bucket" { type = string }
 variable "sns_topic" { type = string }

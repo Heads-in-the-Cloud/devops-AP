@@ -28,6 +28,10 @@ credentials:
           id: "AWS-ECS-Secrets"
           scope: GLOBAL
           secret: ${AWS_ECS_SECRET}
+      - string:
+          id: "AWS-EKS-Secrets"
+          scope: GLOBAL
+          secret: ${AWS_EKS_SECRET}
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
   views:

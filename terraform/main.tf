@@ -45,11 +45,15 @@ module "public" {
     aws_secret_region   = var.aws_secret_region,
     aws_secret_services = var.aws_secret_services,
     aws_ecs_secret      = var.aws_ecs_secret,
+    aws_eks_secret      = var.aws_eks_secret,
 
     s3_bucket = var.jenkins_s3_bucket,
     sns_topic = var.sns_topic,
     user_id = var.aws_user_id
   })
+
+  route53_zone_id = var.route53_zone_id
+  route53_url = var.route53_url
 
   jenkins_config = {
     plugins_list = file("./scripts/jenkins_plugins.txt"),

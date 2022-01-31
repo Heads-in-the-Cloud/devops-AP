@@ -9,21 +9,31 @@ pipeline {
             description: 'Determines whether to deploy or to destroy the EKS cluster',
             defaultValue: false
         )
+        choice(
+            name: 'Service',
+            description: 'Determines which services to deploy / restart',
+            choices: [ 'all', 'users', 'flights', 'bookings' ]
+        )
     }
 
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
+        SECRET_URL = credentials('AWS-EKS-Secrets')
 
-        CLUSTER_NAME="ap-eks-cluster"
+        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
+        def output = sh(returnStdout: true, script: aws_script)
+        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
 
-        NODE_TYPE="t2.micro"
-        NODE_COUNT=4
-        NODE_GROUP="linux-nodes"
+        CLUSTER_NAME = "ap-eks-cluster"
+
+        NODE_TYPE = aws_secrets['NODE_TYPE']
+        NODE_COUNT = aws_secrets['NODE_COUNT']
+        NODE_GROUP = aws_secrets['NODE_GROUP']
 
         EKSCTL_CMD = "/usr/local/bin/eksctl"
 
-        KMS_KEY = "arn:aws:kms:us-east-2:902316339693:key/14e5926d-ca50-4b73-8501-4b898d93e7d7"
+        KMS_KEY = aws_secrets['KMS_KEY']
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
     }
 
@@ -34,7 +44,7 @@ pipeline {
         }}
 
         // Conditional deployment
-        stage('Deploy EKS') { when { expression { params.Deploy }}
+        stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
             steps { script{
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
                 def status = sh(returnStatus: true, script: cluster_status )
@@ -66,6 +76,18 @@ pipeline {
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'kubectl apply -f ingress.yml')
             }
+        }}
+
+        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'Cluster is not up so no need to update the deployment!')
+                }
+            }
+            sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+            sh(script: "kubectl rollout restart deployment ${params.Service}")
         }}
 
         // Destroy EKS

@@ -9,7 +9,7 @@ keyArn=$1
 inputFile=$2
 outputDir=$3
 
-aws-encryption-cli --decrypt \
+/usr/local/bin/aws-encryption-cli --decrypt \
 --input $inputFile \
 --wrapping-keys key=$keyArn \
 --commitment-policy require-encrypt-require-decrypt \
