@@ -28,7 +28,9 @@ echo "Installing Jenkins and Dependencies ----------"
 sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
 sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
 sudo yum upgrade -y
-sudo yum install jenkins java-1.8.0-openjdk-devel git docker -y
+sudo yum install jenkins git docker -y
+
+sudo amazon-linux-extras install java-openjdk11 -y
 
 echo "Installing Kubernetes and Dependencies ----------"
 cat <<EOF | sudo tee /etc/yum.repos.d/kubernetes.repo >/dev/null
@@ -77,6 +79,9 @@ export AWS_REGION=${aws_secret_region}
 export AWS_SERVICES_SECRET=${aws_secret_services}
 export AWS_ECS_SECRET=${aws_ecs_secret}
 export AWS_EKS_SECRET=${aws_eks_secret}
+export SONARQUBE_TOKEN=${sonarqube_token}
+export SONARQUBE_URL=${sonarqube_url}
+export JENKINS_URL=${jenkins_url}
 
 export S3_BUCKET=${s3_bucket}
 
@@ -140,6 +145,7 @@ pip3 install aws-encryption-sdk-cli
 aws s3 cp s3://$S3_BUCKET/KMS_ENCRYPT /usr/local/bin/kms-encrypt.sh
 aws s3 cp s3://$S3_BUCKET/KMS_DECRYPT /usr/local/bin/kms-decrypt.sh
 
+# Changing permissions
 chmod +x /usr/local/bin/kms-encrypt.sh
 chmod +x /usr/local/bin/kms-decrypt.sh
 

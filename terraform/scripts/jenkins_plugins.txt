@@ -68,6 +68,7 @@ resource-disposer
 scm-api
 script-security
 snakeyaml-api
+sonar
 sshd
 ssh-credentials
 ssh-slaves

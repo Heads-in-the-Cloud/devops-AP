@@ -25,12 +25,16 @@ module "public" {
   bastion_ip = var.bastion_ip
   nat_ip     = var.nat_ip
   jenkins_ip = var.jenkins_ip
+  sonarqube_ip = var.sonarqube_ip
 
   # Variables
   vnc_password      = var.vnc_password
   availability_zone = var.availability_zone
 
-  s3_bucket_name = var.jenkins_s3_bucket
+  route53_zone_id = var.route53_zone_id
+
+  jenkins_s3_bucket = var.jenkins_s3_bucket
+  jenkins_route53_url = var.jenkins_route53_url
 
   jenkins_startup = templatefile(var.jenkins_startup, {
     jenkins_user_id   = var.jenkins_user_id,
@@ -46,14 +50,14 @@ module "public" {
     aws_secret_services = var.aws_secret_services,
     aws_ecs_secret      = var.aws_ecs_secret,
     aws_eks_secret      = var.aws_eks_secret,
+    sonarqube_token     = var.sonarqube_token,
+    sonarqube_url       = var.sonarqube_route53_url,
+    jenkins_url         = var.jenkins_route53_url
 
     s3_bucket = var.jenkins_s3_bucket,
     sns_topic = var.sns_topic,
     user_id = var.aws_user_id
   })
-
-  route53_zone_id = var.route53_zone_id
-  route53_url = var.route53_url
 
   jenkins_config = {
     plugins_list = file("./scripts/jenkins_plugins.txt"),
@@ -72,10 +76,24 @@ module "public" {
     eks_deploy_XML = templatefile("./scripts/jenkins_job.xml", var.eks_devops_xml),
   }
 
+  sonarqube_s3_bucket = var.sonarqube_s3_bucket
+  sonarqube_route53_url = var.sonarqube_route53_url
+
+  sonarqube_startup = templatefile(var.sonarqube_startup, {
+    aws_secret_region = var.aws_secret_region,
+    sns_topic = var.sns_topic,
+    user_id = var.aws_user_id
+  })
+
+  sonarqube_config = {
+
+  }
+
   # Resource Enablers
   enable_bastion = var.enable_bastion
   enable_nat     = var.enable_nat
   enable_jenkins = var.enable_jenkins
+  enable_sonarqube = var.enable_sonarqube
 
   # References
   utopia_vpc_id = module.network.utopia_vpc.id

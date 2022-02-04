@@ -7,15 +7,18 @@ variable "private_subnet" { type = list(string) }
 variable "bastion_ip" { type = string }
 variable "nat_ip" { type = string }
 variable "jenkins_ip" { type = string }
+variable "sonarqube_ip" { type = string }
 
 variable "enable_jenkins" { type = bool }
 variable "enable_bastion" { type = bool }
 variable "enable_nat" { type = bool }
+variable "enable_sonarqube" { type = bool }
 variable "enable_eks_cluster" { type = bool }
 
 variable "availability_zone" { type = list(string) }
 
 variable "jenkins_startup" { type = string }
+variable "sonarqube_startup" { type = string }
 
 variable "vnc_password" {
   type        = string
@@ -81,9 +84,19 @@ variable "aws_eks_secret" {
 }
 
 variable "route53_zone_id" { type = string }
-variable "route53_url" { type = string }
 
+variable "jenkins_route53_url" { type = string }
 variable "jenkins_s3_bucket" { type = string }
+
+variable "sonarqube_route53_url" { type = string }
+variable "sonarqube_s3_bucket" { type = string }
+
+variable "sonarqube_token" {
+  type        = string
+  description = "SonarQube API Token"
+  sensitive   = true
+}
+
 variable "sns_topic" { type = string }
 variable "aws_user_id" { type = string }
 

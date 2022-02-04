@@ -11,7 +11,7 @@ resource "aws_network_interface" "jenkins" {
 
 resource "aws_instance" "jenkins" {
   ami           = "ami-002068ed284fb165b"
-  instance_type = "t2.micro"
+  instance_type = "t2.small"
   key_name      = "terraform"
   count         = var.enable_jenkins ? 1 : 0
 
@@ -112,7 +112,7 @@ resource "aws_iam_role_policy" "jenkins" {
 
 # jenkins config S3 Bucket
 resource "aws_s3_bucket" "jenkins_config" {
-  bucket = "tf-ap-jenkins-config"
+  bucket = var.jenkins_s3_bucket
   acl    = "private"
 }
 resource "aws_s3_bucket_object" "jenkins_jobs" {
@@ -125,7 +125,7 @@ resource "aws_s3_bucket_object" "jenkins_jobs" {
 # jenkins route 53 url
 resource "aws_route53_record" "jenkins" {
   zone_id = var.route53_zone_id
-  name = var.route53_url
+  name = var.jenkins_route53_url
   type = "A"
   ttl = "300"
   records = [ aws_instance.jenkins[0].public_ip ]
