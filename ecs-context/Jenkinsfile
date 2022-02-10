@@ -75,7 +75,7 @@ pipeline {
                 sh(script: "$DOCKER_CMD compose up")
             }
         }}
-        stage('Deploy ECS') { when { expression { params.Deploy && params.OnlyRestart }}
+        stage('Restart ECS service') { when { expression { params.Deploy && params.OnlyRestart }}
             steps {
             dir(path: './ecs-context') { script{
                 def status = sh(returnStatus: true, script: '$DOCKER_CMD compose ps | grep $COMPOSE_PROJECT_NAME')
