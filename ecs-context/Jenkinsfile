@@ -32,7 +32,7 @@ pipeline {
         def vpc_script = "aws ec2 describe-vpcs --region $AWS_REGION --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`$VPC_NAME`]].VpcId' --output text"
         def alb_script = "aws elbv2 describe-load-balancers --region $AWS_REGION --names $ALB_NAME --query LoadBalancers[0].LoadBalancerArn --output text"
 
-        VPC_ID = sh(returnStdout: true, script: vpc_script)
+        VPC_ID = sh(returnStdout: true, script: vpc_script).trim()
         ALB_ID = sh(returnStdout: true, script: alb_script).trim()
 
         SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
