@@ -23,12 +23,14 @@ function wait_for_jenkins () {
 echo "Installs dependencies ----------"
 sudo amazon-linux-extras install epel -y
 sudo yum update -y
+sudo yum install yum-utils -y
+sudo yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
 
 echo "Installing Jenkins and Dependencies ----------"
 sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
 sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
 sudo yum upgrade -y
-sudo yum install jenkins git docker -y
+sudo yum install jenkins git docker terraform -y
 
 sudo amazon-linux-extras install java-openjdk11 -y
 
@@ -79,6 +81,7 @@ export AWS_REGION=${aws_secret_region}
 export AWS_SERVICES_SECRET=${aws_secret_services}
 export AWS_ECS_SECRET=${aws_ecs_secret}
 export AWS_EKS_SECRET=${aws_eks_secret}
+export TERRAFORM_SECRET=${terraform_secret}
 export SONARQUBE_TOKEN=${sonarqube_token}
 export SONARQUBE_URL=${sonarqube_url}
 export JENKINS_URL=${jenkins_url}

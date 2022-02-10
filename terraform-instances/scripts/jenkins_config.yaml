@@ -36,6 +36,10 @@ credentials:
           id: "SonarQube-Token"
           scope: "GLOBAL"
           secret: ${SONARQUBE_TOKEN}
+      - string:
+          id: "Terraform-Secrets"
+          scope: "GLOBAL"
+          secret: ${TERRAFORM_SECRET}
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
   views:
@@ -68,6 +72,7 @@ jenkins:
       jobNames:
       - "ECSDeploy"
       - "EKSDeploy"
+      - "Terraform"
   clouds:
   - amazonEC2:
       cloudName: "AWS-Cloud"

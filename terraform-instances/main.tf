@@ -21,6 +21,7 @@ module "jenkins" {
     aws_secret_services   = var.aws_secret_services,
     aws_ecs_secret        = var.aws_ecs_secret,
     aws_eks_secret        = var.aws_eks_secret,
+    terraform_secret      = var.terraform_secret,
     sonarqube_token       = var.sonarqube_token,
     sonarqube_url         = var.sonarqube_route53_url,
     jenkins_url           = var.jenkins_route53_url

@@ -22,7 +22,7 @@ resource "aws_instance" "sonarqube" {
   # user_data            = var.sonarqube_startup
   user_data = <<-EOF
   #!/usr/bin/env bash
-  sudo /opt/sonarqube/bin/linux-x86-64/sonar.sh start"
+  sudo /opt/sonarqube/bin/linux-x86-64/sonar.sh start
   EOF
 
   iam_instance_profile = aws_iam_instance_profile.sonarqube.name

@@ -73,6 +73,11 @@ variable "aws_eks_secret" {
   description = "AWS Credentials url used in EKS"
   sensitive   = true
 }
+variable "terraform_secret" {
+  type        = string
+  description = "Secrets Manager url used for Terraform in Jenkins"
+  sensitive   = true
+}
 variable "sonarqube_token" {
   type        = string
   description = "SonarQube API Token"
