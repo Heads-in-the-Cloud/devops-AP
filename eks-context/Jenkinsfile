@@ -106,7 +106,4 @@ pipeline {
             }
         }}
     }
-    post { always {
-        echo(message: 'Wow!')
-    }}
 }
