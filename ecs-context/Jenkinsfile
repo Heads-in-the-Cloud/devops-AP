@@ -33,7 +33,7 @@ pipeline {
         def alb_script = "aws elbv2 describe-load-balancers --region $AWS_REGION --names $ALB_NAME --query LoadBalancers[0].LoadBalancerArn --output text"
 
         VPC_ID = sh(returnStdout: true, script: vpc_script)
-        ALB_ID = sh(returnStdout: true, script: alb_script)
+        ALB_ID = sh(returnStdout: true, script: alb_script).trim()
 
         SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
         MYSQL_USER = aws_secrets["MYSQL_USER"].toString()
