@@ -9,6 +9,11 @@ pipeline {
             description: 'Determines whether to deploy or to destroy the ECS cluster',
             defaultValue: false
         )
+        booleanParam(
+            name: 'OnlyRestart',
+            description: 'Does a check for the status of the cluster first before restarting',
+            defaultValue: true
+        )
     }
 
     environment {
@@ -17,14 +22,18 @@ pipeline {
         SECRET_URL = credentials('AWS-ECS-Secrets')
         COMPOSE_PROJECT_NAME = "ap-utopia"
 
+        VPC_NAME = "AP_TF_VPC"
+        ALB_NAME = "ap-utopia-load-balancer"
+
         def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
         def output = sh(returnStdout: true, script: aws_script)
         def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
 
-        def vpc_script = "aws ec2 describe-vpcs --region $AWS_REGION --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`AP_TF_VPC`]].VpcId' --output text"
+        def vpc_script = "aws ec2 describe-vpcs --region $AWS_REGION --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`$VPC_NAME`]].VpcId' --output text"
+        def alb_script = "aws elbv2 describe-load-balancers --region $AWS_REGION --names $ALB_NAME --query LoadBalancers[0].LoadBalancerArn --output text"
 
-        // VPC_ID = sh(returnStdout: true, script: vpc_script)  // Terraform Created VPC
-        VPC_ID = "vpc-0eac5787af2a09c4f"                        // Default VPC
+        VPC_ID = sh(returnStdout: true, script: vpc_script)
+        ALB_ID = sh(returnStdout: true, script: alb_script)
 
         SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
         MYSQL_USER = aws_secrets["MYSQL_USER"].toString()
@@ -60,11 +69,22 @@ pipeline {
         }}
 
         // Conditional deployment
-        stage('Deploy ECS') { when { expression { params.Deploy }}
+        stage('Deploy ECS') { when { expression { params.Deploy && !params.OnlyRestart }}
             steps {
             dir(path: './ecs-context') {
                 sh(script: "$DOCKER_CMD compose up")
             }
+        }}
+        stage('Deploy ECS') { when { expression { params.Deploy && params.OnlyRestart }}
+            steps {
+            dir(path: './ecs-context') { script{
+                def status = sh(returnStatus: true, script: '$DOCKER_CMD compose ps | grep $COMPOSE_PROJECT_NAME')
+                if (status != 0) {
+                    echo(message: 'Cluster is down so no need to restart services.')
+                } else {
+                    sh(script: "$DOCKER_CMD compose up")
+                }
+            }}
         }}
 
         // Destroy ECS

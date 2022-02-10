@@ -1,6 +1,7 @@
 version: "3.9"
 
 x-aws-vpc: ${VPC_ID}
+x-aws-loadbalancer: ${ALB_ID}
 
 services:
   users:
