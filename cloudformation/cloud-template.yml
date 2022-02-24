@@ -3,30 +3,37 @@ Parameters:
   VpcCidrBlock:
     Type: String
     Description: "VPC Cidr Block"
+    NoEcho: true
   AvailablityZones:
     Type: List<AWS::EC2::AvailabilityZone::Name>
     Description: "Availabilty zones to create resources in."
+    NoEcho: true
   PublicSubnets:
     Type: CommaDelimitedList
     Description: "Cidr Blocks from the VPC allocated for Public subnets."
+    NoEcho: true
   PrivateSubnets:
     Type: CommaDelimitedList
     Description: "Cidr Blocks from the VPC allocated for private subnets."
+    NoEcho: true
   NatIpAddress:
     Type: CommaDelimitedList
     Description: "Private IP Addresses for the NAT Instances in each availabilty zone."
+    NoEcho: true
   Route53ZoneId:
     Type: String
     Description: "Zone ID for the host in the region"
+    NoEcho: true
   EcsRecordName:
     Type: String
     Description: "Name of the Url used for ECS records"
+    NoEcho: true
   EksRecordName:
     Type: String
     Description: "Name of the Url used for EKS records"
+    NoEcho: true
 
 Resources:
-
   # VPC
   UtopiaVPC:
     Type: AWS::EC2::VPC
@@ -261,5 +268,14 @@ Resources:
       - !GetAtt EcsLoadBalancer.DNSName
 
   # EKS Resources
+  EKSRouteRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53ZoneId
+      Name: !Ref EksRecordName
+      Type: CNAME
+      TTL: 30
+      ResourceRecords:
+        - placeholder.text
 
 # Outputs:
