@@ -32,6 +32,9 @@ Parameters:
     Type: String
     Description: "Name of the Url used for EKS records"
     NoEcho: true
+  NlbName:
+    Type: String
+    Description: "Name of the Network Load Balancer to be used for ECS"
 
 Resources:
   # VPC
@@ -247,7 +250,7 @@ Resources:
   EcsLoadBalancer:
     Type: AWS::ElasticLoadBalancingV2::LoadBalancer
     Properties:
-      Name: "ap-utopia-load-balancer"
+      Name: !Ref NlbName
       Scheme: internet-facing
       Type: network
       IpAddressType: ipv4
