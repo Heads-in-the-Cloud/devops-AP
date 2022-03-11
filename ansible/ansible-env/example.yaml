@@ -1,0 +1,13 @@
+---
+- hosts: jenkins
+  become: yes
+  tasks:
+  - yum:
+      name: "pip"
+  - pip:
+      name: "boto"
+  - route53:
+      state: get
+      zone: hitec.link
+      record: ap-jenkins.hitec.link
+      type: A

@@ -1,3 +1,4 @@
 # Ignores all .env files
 **/.env
 **/secrets.**
+**.pem

@@ -1,0 +1,13 @@
+[sonarqube]
+ap-sonarqube.hitec.link
+
+[sonarqube:vars]
+ansible_user=ec2-user
+ansible_ssh_private_key_file=./secrets/terraform.pem
+
+[jenkins]
+ap-jenkins.hitec.link
+
+[jenkins:vars]
+ansible_user=ec2-user
+ansible_ssh_private_key_file=./secrets/terraform.pem
