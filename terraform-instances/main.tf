@@ -27,7 +27,8 @@ module "jenkins" {
     jenkins_url           = var.jenkins_route53_url
     s3_bucket             = var.jenkins_s3_bucket,
     sns_topic             = var.sns_topic,
-    user_id               = var.aws_user_id
+    user_id               = var.aws_user_id,
+    resource_secret_name  = var.resource_secret_name
   })
   s3_config = {
     plugins_list          = file("./scripts/jenkins_plugins.txt"),

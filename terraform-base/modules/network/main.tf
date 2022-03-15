@@ -54,7 +54,7 @@ resource "aws_subnet" "private_subnet" {
 resource "aws_route_table" "private_rt" {
   vpc_id = aws_vpc.utopia_vpc.id
 
-  count = var.enable_private ? length(var.private_subnet) : 0
+  count = length(var.private_subnet)
 
   route {
     cidr_block  = "0.0.0.0/0"
@@ -67,5 +67,5 @@ resource "aws_route_table_association" "private_rt_assoc" {
   subnet_id      = aws_subnet.private_subnet[count.index].id
   route_table_id = aws_route_table.private_rt[count.index].id
 
-  count = var.enable_private ? length(var.private_subnet) : 0
+  count = length(var.private_subnet)
 }

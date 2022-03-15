@@ -40,6 +40,10 @@ credentials:
           id: "Terraform-Secrets"
           scope: "GLOBAL"
           secret: ${TERRAFORM_SECRET}
+      - string:
+          id: "Resource-IDs"
+          scope: "GLOBAL"
+          secret: ${RESOURCE_ID}
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
   views:

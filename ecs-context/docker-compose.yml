@@ -33,3 +33,18 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${BOOKINGS_PORT}
+
+x-aws-cloudformation:
+  Resources:
+    UsersService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }
+    FlightsService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }
+    BookingsService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }

@@ -19,35 +19,38 @@ pipeline {
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
-        SECRET_URL = credentials('AWS-ECS-Secrets')
-        COMPOSE_PROJECT_NAME = "ap-utopia"
+        ECS_SECRETS_URL = credentials('AWS-ECS-Secrets')
+        RESOURCE_SECRETS_URL = credentials('Resource-IDs')
 
-        VPC_NAME = "AP_TF_VPC"
-        ALB_NAME = "ap-utopia-load-balancer"
+        def ecs_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $ECS_SECRETS_URL --region $AWS_REGION")
+        def ecs_secrets = readJSON(text: readJSON(text: ecs_output).SecretString)
 
-        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
-        def output = sh(returnStdout: true, script: aws_script)
-        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+        def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
+        def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
+        def subnets = readJSON(text: resource_secrets["PRIVATE_SUBNET_IDS"])
 
-        def vpc_script = "aws ec2 describe-vpcs --region $AWS_REGION --query 'Vpcs[?Tags[?Key==`Name`]|[?Value==`$VPC_NAME`]].VpcId' --output text"
-        def alb_script = "aws elbv2 describe-load-balancers --region $AWS_REGION --names $ALB_NAME --query LoadBalancers[0].LoadBalancerArn --output text"
+        COMPOSE_PROJECT_NAME = ecs_secrets["COMPOSE_PROJECT_NAME"].toString()
 
-        VPC_ID = sh(returnStdout: true, script: vpc_script).trim()
-        ALB_ID = sh(returnStdout: true, script: alb_script).trim()
+        VPC_ID = resource_secrets["VPC_ID"].toString()
+        ALB_ID = resource_secrets["ECS_LB_ID"].toString()
 
-        SPRING_DATASOURCE_URL = aws_secrets["SPRING_DATASOURCE_URL"].toString()
-        MYSQL_USER = aws_secrets["MYSQL_USER"].toString()
-        MYSQL_PASSWORD = aws_secrets["MYSQL_PASSWORD"].toString()
+        SPRING_DATASOURCE_URL = ecs_secrets["SPRING_DATASOURCE_URL"].toString()
+        MYSQL_USER = ecs_secrets["MYSQL_USER"].toString()
+        MYSQL_PASSWORD = ecs_secrets["MYSQL_PASSWORD"].toString()
 
-        AWS_USER_ID = aws_secrets["AWS_USER_ID"].toString()
+        AWS_USER_ID = ecs_secrets["AWS_USER_ID"].toString()
 
-        USERS_TAG = aws_secrets["USERS_TAG"].toString()
-        FLIGHTS_TAG = aws_secrets["FLIGHTS_TAG"].toString()
-        BOOKINGS_TAG = aws_secrets["BOOKINGS_TAG"].toString()
+        USERS_TAG = ecs_secrets["USERS_TAG"].toString()
+        FLIGHTS_TAG = ecs_secrets["FLIGHTS_TAG"].toString()
+        BOOKINGS_TAG = ecs_secrets["BOOKINGS_TAG"].toString()
 
-        USERS_PORT = aws_secrets["USERS_PORT"].toString()
-        FLIGHTS_PORT = aws_secrets["FLIGHTS_PORT"].toString()
-        BOOKINGS_PORT = aws_secrets["BOOKINGS_PORT"].toString()
+        USERS_PORT = ecs_secrets["USERS_PORT"].toString()
+        FLIGHTS_PORT = ecs_secrets["FLIGHTS_PORT"].toString()
+        BOOKINGS_PORT = ecs_secrets["BOOKINGS_PORT"].toString()
+
+        SUBNET_1 = subnets[0].toString()
+        SUBNET_2 = subnets[1].toString()
+        SUBNET_3 = subnets[2].toString()
 
         DOCKER_CMD = "/usr/local/bin/docker"
     }

@@ -3,24 +3,6 @@
 pipeline {
     agent any
 
-    parameters {
-        booleanParam(
-            name: 'Apply',
-            description: 'Determines whether to apply or to just save/verify a plan',
-            defaultValue: false
-        )
-        booleanParam(
-            name: 'PrivateSubnets',
-            description: 'Deploys NAT instances to each subnet created.',
-            defaultValue: false
-        )
-        booleanParam(
-            name: 'DeployBastions',
-            description: 'Determines whether to deploy any bastion host instances to each availability zone.',
-            defaultValue: false
-        )
-    }
-
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
@@ -32,23 +14,19 @@ pipeline {
 
         TF_VAR_vpc_cidr = aws_secrets["vpc_cidr"].toString()
         TF_VAR_availability_zone = aws_secrets["availability_zones"].toString()
+
         TF_VAR_public_subnet = aws_secrets["public_subnets"].toString()
         TF_VAR_private_subnet = aws_secrets["private_subnets"].toString()
 
-        TF_VAR_bastion_ip   = aws_secrets["bastion_ip"].toString()
-        TF_VAR_nat_ip       = aws_secrets["nat_ip"].toString()
-
-        TF_VAR_vnc_password = " "
+        TF_VAR_nat_ip = aws_secrets["nat_ip"].toString()
 
         TF_VAR_route53_zone_id = aws_secrets["route53_zone_id"].toString()
         TF_VAR_aws_user_id = aws_secrets["aws_user_id"].toString()
 
         TF_VAR_ecs_record = aws_secrets["ecs_url"].toString()
+        TF_VAR_eks_record = aws_secrets["eks_url"].toString()
 
-        TF_VAR_enable_bastion = params.DeployBastions.toString()
-        TF_VAR_enable_nat = params.PrivateSubnets.toString()
-
-        TF_VAR_enable_eks_cluster = false
+        TF_VAR_resource_secret_name = aws_secrets["resource_secret_name"].toString()
     }
 
     stages {
@@ -65,7 +43,7 @@ pipeline {
             }
         }}
 
-        stage('Terraform Apply') { when { expression { params.Apply }}
+        stage('Terraform Apply') {
             steps{
             echo(message: 'Terraform Apply!')
             dir("./terraform-base") {

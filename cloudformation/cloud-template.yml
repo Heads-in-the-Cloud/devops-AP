@@ -133,6 +133,14 @@ Resources:
           FromPort: 443
           ToPort: 443
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8082
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: tcp
           FromPort: 0
@@ -255,8 +263,8 @@ Resources:
       Type: network
       IpAddressType: ipv4
       Subnets:
-        - !Ref PrivateSubnetA
-        - !Ref PrivateSubnetB
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
       Tags:
         - Key: Name
           Value: "AP_ECS_LB"
@@ -268,7 +276,7 @@ Resources:
       Type: CNAME
       TTL: 30
       ResourceRecords:
-      - !GetAtt EcsLoadBalancer.DNSName
+        - !GetAtt EcsLoadBalancer.DNSName
 
   # EKS Resources
   EKSRouteRecord:
@@ -281,4 +289,42 @@ Resources:
       ResourceRecords:
         - placeholder.text
 
-# Outputs:
+  # Resource Reference Secret
+  ResourceSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: "Resource ARN / IDs deployed with terraform"
+      KmsKeyId: AP-Utopia-KMS
+      Name: prod/Angel/ResourceIDs
+      SecretString: !Sub
+        - '{"VPC_ID":${VPC_ID},"ECS_LB_ID":${ECS_LB_ID},"PUBLIC_SUBNET_IDS":${PUBLIC_SUBNET_IDS},"PRIVATE_SUBNET_IDS":${PRIVATE_SUBNET_IDS}}'
+        - VPC_ID: !Ref UtopiaVPC
+          ECS_LB_ID: !Ref EcsLoadBalancer
+          PUBLIC_SUBNET_IDS: !Join
+            - ","
+            - - !Ref PublicSubnetA
+              - !Ref PublicSubnetB
+          PRIVATE_SUBNET_IDS: !Join
+            - ","
+            - - !Ref PrivateSubnetA
+              - !Ref PrivateSubnetB
+
+Outputs:
+  VpcID:
+    Description: VPC reference ID
+    Value: !Ref UtopiaVPC
+  EcsNlbID:
+    Description: ECS Load Balancer ID
+    Value: !Ref EcsLoadBalancer
+  PublicSubnetIDs:
+    Description: Public subnets
+    Value: !Join
+      - ","
+      - - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+  PrivateSubnetIDs:
+    Description: Private subnets
+    Value: !Join
+      - ","
+      - - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB

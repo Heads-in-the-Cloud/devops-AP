@@ -95,6 +95,8 @@ export JENKINS_PASSWORD=$(echo -n ${jenkins_password} | base64 -d)
 export JENKINS_URL=http://localhost:8080
 export JENKINS_HOME="/var/lib/jenkins"
 
+export RESOURCE_ID=${resource_secret_name}
+
 echo 'Installing Plugins ----------'
 aws s3 cp s3://$S3_BUCKET/plugins_list ./plugins_list.txt
 PLUGINS_LIST=$(cat ./plugins_list.txt)

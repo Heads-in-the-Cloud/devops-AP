@@ -83,6 +83,11 @@ variable "sonarqube_token" {
   description = "SonarQube API Token"
   sensitive   = true
 }
+variable "resource_secret_name" {
+  type        = string
+  description = "URL for terraform outputs"
+  sensitive   = true
+}
 
 # SonarQube User Script Variables ---- ---- ---- ----
 
