@@ -1,0 +1,109 @@
+#!/bin/groovy
+
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'Deploy',
+            description: 'Determines whether to deploy or to destroy the EKS cluster',
+            defaultValue: false
+        )
+        choice(
+            name: 'Service',
+            description: 'Determines which services to deploy / restart',
+            choices: [ 'all', 'users', 'flights', 'bookings' ]
+        )
+    }
+
+    environment {
+        AWS = credentials('AWS-Key')
+        AWS_REGION = credentials('AWS-Region')
+        SECRET_URL = credentials('AWS-EKS-Secrets')
+
+        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
+        def output = sh(returnStdout: true, script: aws_script)
+        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+
+        CLUSTER_NAME = "ap-eks-cluster"
+
+        NODE_TYPE = aws_secrets['NODE_TYPE'].toString()
+        NODE_COUNT = aws_secrets['NODE_COUNT'].toString()
+        NODE_GROUP = aws_secrets['NODE_GROUP'].toString()
+
+        EKSCTL_CMD = "/usr/local/bin/eksctl"
+
+        KMS_KEY = aws_secrets['KMS_KEY'].toString()
+        KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
+    }
+
+    stages {
+        stage('GitHub Fetch') { steps{
+            echo(message: 'GitHub Fetch!')
+            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+        }}
+
+        // Conditional deployment
+        stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 0) {
+                    error(message: 'EKS Cluster already exists!')
+                }
+            }
+
+            dir(path: './eks-context') {
+                echo(message: 'Deploying Messages!')
+                sh(script: "$EKSCTL_CMD create cluster --name $CLUSTER_NAME --region $AWS_REGION --nodegroup-name $NODE_GROUP --node-type $NODE_TYPE --nodes $NODE_COUNT")
+                sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+
+                // Applying NGINX Ingress Configs
+                sh(script: 'kubectl apply -f nginx_ingress/ns-and-sa.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/default-server-secret.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/nginx-config.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/ingress-class.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/rbac.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/nginx-ingress.yaml')
+                sh(script: 'kubectl apply -f nginx_ingress/loadbalancer-aws-elb.yaml')
+
+                // Apply Secrets
+                sh(script: "$KMS_DECRYPT ./secrets.yml.encrypted ./secrets.yml")
+
+                // Launch Microservices
+                sh(script: 'kubectl apply -f secrets.yml')
+                sh(script: 'kubectl apply -f deployments.yml')
+                sh(script: 'kubectl apply -f services.yml')
+                sh(script: 'kubectl apply -f ingress.yml')
+            }
+        }}
+
+        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'Cluster is not up so no need to update the deployment!')
+                }
+            }
+            sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+            sh(script: "kubectl rollout restart deployment ${params.Service}")
+        }}
+
+        // Destroy EKS
+        stage('Takedown EKS') { when { expression { !params.Deploy }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'EKS Cluster does not exist!')
+                }
+            }
+
+            dir(path: './eks-context') {
+                echo(message: 'Taking Down Messages!')
+                sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
+            }
+        }}
+    }
+}

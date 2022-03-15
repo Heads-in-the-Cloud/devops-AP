@@ -1,0 +1,119 @@
+credentials:
+  system:
+    domainCredentials:
+    - credentials:
+      - aws:
+          id: "AWS-Key"
+          description: "AWS Login Credentials to use AWS CLI in Jenkins"
+          scope: GLOBAL
+          accessKey: "${AWS_ACCESS_KEY}"
+          secretKey: "${AWS_SECRET_ACCESS_KEY}"
+      - basicSSHUserPrivateKey:
+          id: "AWS-SSH"
+          description: "AWS SSH key to use AWS CLI in Jenkins"
+          privateKeySource:
+            directEntry:
+              privateKey: ${AWS_SSH_KEY}
+          scope: GLOBAL
+          username: "terraform"
+      - string:
+          id: "AWS-Region"
+          scope: GLOBAL
+          secret: ${AWS_REGION}
+      - string:
+          id: "AWS-Services-Secret"
+          scope: GLOBAL
+          secret: ${AWS_SERVICES_SECRET}
+      - string:
+          id: "AWS-ECS-Secrets"
+          scope: GLOBAL
+          secret: ${AWS_ECS_SECRET}
+      - string:
+          id: "AWS-EKS-Secrets"
+          scope: GLOBAL
+          secret: ${AWS_EKS_SECRET}
+      - string:
+          id: "SonarQube-Token"
+          scope: "GLOBAL"
+          secret: ${SONARQUBE_TOKEN}
+      - string:
+          id: "Terraform-Secrets"
+          scope: "GLOBAL"
+          secret: ${TERRAFORM_SECRET}
+      - string:
+          id: "Resource-IDs"
+          scope: "GLOBAL"
+          secret: ${RESOURCE_ID}
+jenkins:
+  systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
+  views:
+  - list:
+      name: "Services"
+      columns:
+      - "status"
+      - "weather"
+      - "jobName"
+      - "lastSuccess"
+      - "lastFailure"
+      - "lastDuration"
+      - "buildButton"
+      - "descriptionColumn"
+      jobNames:
+      - "BookingsPipeline"
+      - "FlightsPipeline"
+      - "UsersPipeline"
+  - list:
+      name: "Deployments"
+      columns:
+      - "status"
+      - "weather"
+      - "jobName"
+      - "lastSuccess"
+      - "lastFailure"
+      - "lastDuration"
+      - "buildButton"
+      - "descriptionColumn"
+      jobNames:
+      - "ECSDeploy"
+      - "EKSDeploy"
+      - "Terraform"
+  clouds:
+  - amazonEC2:
+      cloudName: "AWS-Cloud"
+      credentialsId: "AWS-Key"
+      region: "us-east-2"
+      sshKeysCredentialsId: "AWS-SSH"
+      useInstanceProfileForCredentials: false
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "asoto22"
+          name: "Angel Soto Pellot"
+          password: "${JENKINS_PASSWORD}"
+          properties:
+          - "apiToken"
+unclassified:
+  location:
+    url: "http://${JENKINS_URL}:8080"
+  sonarGlobalConfiguration:
+      buildWrapperEnabled: true
+      installations:
+      - credentialsId: "SonarQube-Token"
+        name: "SonarQube"
+        serverUrl: "http://${SONARQUBE_URL}:9000"
+        triggers:
+          skipScmCause: false
+          skipUpstreamCause: false
+tool:
+  maven:
+    installations:
+    - name: "M3"
+      properties:
+      - installSource:
+          installers:
+          - maven:
+              id: "3.8.4"
+  mavenGlobalConfig:
+    globalSettingsProvider: "standard"
+    settingsProvider: "standard"

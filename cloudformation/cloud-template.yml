@@ -1,0 +1,330 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  VpcCidrBlock:
+    Type: String
+    Description: "VPC Cidr Block"
+    NoEcho: true
+  AvailablityZones:
+    Type: List<AWS::EC2::AvailabilityZone::Name>
+    Description: "Availabilty zones to create resources in."
+    NoEcho: true
+  PublicSubnets:
+    Type: CommaDelimitedList
+    Description: "Cidr Blocks from the VPC allocated for Public subnets."
+    NoEcho: true
+  PrivateSubnets:
+    Type: CommaDelimitedList
+    Description: "Cidr Blocks from the VPC allocated for private subnets."
+    NoEcho: true
+  NatIpAddress:
+    Type: CommaDelimitedList
+    Description: "Private IP Addresses for the NAT Instances in each availabilty zone."
+    NoEcho: true
+  Route53ZoneId:
+    Type: String
+    Description: "Zone ID for the host in the region"
+    NoEcho: true
+  EcsRecordName:
+    Type: String
+    Description: "Name of the Url used for ECS records"
+    NoEcho: true
+  EksRecordName:
+    Type: String
+    Description: "Name of the Url used for EKS records"
+    NoEcho: true
+  NlbName:
+    Type: String
+    Description: "Name of the Network Load Balancer to be used for ECS"
+
+Resources:
+  # VPC
+  UtopiaVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      Tags:
+        - Key: Name
+          Value: "AP_CF_VPC"
+  UtopiaGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "AP_CF_GT"
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      InternetGatewayId: !Ref UtopiaGateway
+
+  # Public Subnets
+  # --- Subnet A
+  PublicSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      CidrBlock: !Select [0, !Ref PublicSubnets]
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [0, !Ref AvailablityZones]
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PublicSubnet_A"
+  PublicRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PublicRT_A"
+  PublicRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref UtopiaGateway
+  PublicRTAssocA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      RouteTableId: !Ref PublicRouteTableA
+  # --- Subnet B
+  PublicSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      CidrBlock: !Select [1, !Ref PublicSubnets]
+      MapPublicIpOnLaunch: true
+      AvailabilityZone: !Select [1, !Ref AvailablityZones]
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PublicSubnet_B"
+  PublicRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PublicRT_B"
+  PublicRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref UtopiaGateway
+  PublicRTAssocB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      RouteTableId: !Ref PublicRouteTableB
+
+  # Private Subnets
+  NatSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: "Nat Security Group"
+      GroupDescription: "Security group for the NAT server"
+      VpcId: !Ref UtopiaVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8082
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 0
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: "NAT Security Group"
+  # --- Subnet A
+  PrivateSubnetA:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      CidrBlock: !Select [0, !Ref PrivateSubnets]
+      AvailabilityZone: !Select [0, !Ref AvailablityZones]
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PrivateSubnet_A"
+  PrivateRouteTableA:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PrivateRT_A"
+  PrivateRouteA:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableA
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatInstanceA
+  PrivateRTAssocA:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetA
+      RouteTableId: !Ref PrivateRouteTableA
+  # --- --- NAT Instance A
+  NatInstanceA:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: "ami-001e4628006fd3582"
+      InstanceType: "t2.micro"
+      KeyName: "terraform"
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref NatNetworkInterfaceA
+          DeviceIndex: "0"
+      Tags:
+        - Key: Name
+          Value: "AP_CF_NAT_A"
+  NatNetworkInterfaceA:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref PublicSubnetA
+      PrivateIpAddress: !Select [0, !Ref NatIpAddress]
+      GroupSet:
+        - !Ref NatSecurityGroup
+      SourceDestCheck: false
+      Tags:
+        - Key: Name
+          Value: "AP_CF_NATNIC_A"
+  # --- Subnet B
+  PrivateSubnetB:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      CidrBlock: !Select [1, !Ref PrivateSubnets]
+      AvailabilityZone: !Select [1, !Ref AvailablityZones]
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PrivateSubnet_B"
+  PrivateRouteTableB:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref UtopiaVPC
+      Tags:
+        - Key: Name
+          Value: "AP_CF_PrivateRT_B"
+  PrivateRouteB:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTableB
+      DestinationCidrBlock: 0.0.0.0/0
+      InstanceId: !Ref NatInstanceB
+  PrivateRTAssocB:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnetB
+      RouteTableId: !Ref PrivateRouteTableB
+  # --- --- NAT Instance B
+  NatInstanceB:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: "ami-001e4628006fd3582"
+      InstanceType: "t2.micro"
+      KeyName: "terraform"
+      NetworkInterfaces:
+        - NetworkInterfaceId: !Ref NatNetworkInterfaceB
+          DeviceIndex: "0"
+      Tags:
+        - Key: Name
+          Value: "AP_CF_NAT_B"
+  NatNetworkInterfaceB:
+    Type: AWS::EC2::NetworkInterface
+    Properties:
+      SubnetId: !Ref PublicSubnetB
+      PrivateIpAddress: !Select [1, !Ref NatIpAddress]
+      GroupSet:
+        - !Ref NatSecurityGroup
+      SourceDestCheck: false
+      Tags:
+        - Key: Name
+          Value: "AP_CF_NATNIC_B"
+
+  # ECS Resources
+  EcsLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: !Ref NlbName
+      Scheme: internet-facing
+      Type: network
+      IpAddressType: ipv4
+      Subnets:
+        - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+      Tags:
+        - Key: Name
+          Value: "AP_ECS_LB"
+  EcsRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53ZoneId
+      Name: !Ref EcsRecordName
+      Type: CNAME
+      TTL: 30
+      ResourceRecords:
+        - !GetAtt EcsLoadBalancer.DNSName
+
+  # EKS Resources
+  EKSRouteRecord:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      HostedZoneId: !Ref Route53ZoneId
+      Name: !Ref EksRecordName
+      Type: CNAME
+      TTL: 30
+      ResourceRecords:
+        - placeholder.text
+
+  # Resource Reference Secret
+  ResourceSecrets:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: "Resource ARN / IDs deployed with terraform"
+      KmsKeyId: AP-Utopia-KMS
+      Name: prod/Angel/ResourceIDs
+      SecretString: !Sub
+        - '{"VPC_ID":${VPC_ID},"ECS_LB_ID":${ECS_LB_ID},"PUBLIC_SUBNET_IDS":${PUBLIC_SUBNET_IDS},"PRIVATE_SUBNET_IDS":${PRIVATE_SUBNET_IDS}}'
+        - VPC_ID: !Ref UtopiaVPC
+          ECS_LB_ID: !Ref EcsLoadBalancer
+          PUBLIC_SUBNET_IDS: !Join
+            - ","
+            - - !Ref PublicSubnetA
+              - !Ref PublicSubnetB
+          PRIVATE_SUBNET_IDS: !Join
+            - ","
+            - - !Ref PrivateSubnetA
+              - !Ref PrivateSubnetB
+
+Outputs:
+  VpcID:
+    Description: VPC reference ID
+    Value: !Ref UtopiaVPC
+  EcsNlbID:
+    Description: ECS Load Balancer ID
+    Value: !Ref EcsLoadBalancer
+  PublicSubnetIDs:
+    Description: Public subnets
+    Value: !Join
+      - ","
+      - - !Ref PublicSubnetA
+        - !Ref PublicSubnetB
+  PrivateSubnetIDs:
+    Description: Private subnets
+    Value: !Join
+      - ","
+      - - !Ref PrivateSubnetA
+        - !Ref PrivateSubnetB

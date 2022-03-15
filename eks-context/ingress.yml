@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eks-ingress
+  namespace: nginx-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.org/rewrites: serviceName=users-svc rewrite=/;
+      serviceName=flights-svc rewrite=/;
+      serviceName=bookings-svc rewrite=/
+spec:
+  rules:
+    - host: "*.elb.amazonaws.com"
+      http:
+        paths:
+          - path: "/users-api/"
+            pathType: Prefix
+            backend:
+              service:
+                name: users-svc
+                port:
+                  number: 8080
+          - path: "/flights-api/"
+            pathType: Prefix
+            backend:
+              service:
+                name: flights-svc
+                port:
+                  number: 8080
+          - path: "/bookings-api/"
+            pathType: Prefix
+            backend:
+              service:
+                name: bookings-svc
+                port:
+                  number: 8080

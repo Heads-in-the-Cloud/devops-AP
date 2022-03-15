@@ -1,0 +1,40 @@
+# Users Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: users
+spec:
+  type: NodePort
+  selector:
+    app: users
+  ports:
+  - port: 8080
+    targetPort: 8080
+
+---
+# Flights Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: flights
+spec:
+  type: NodePort
+  selector:
+    app: flights
+  ports:
+  - port: 8080
+    targetPort: 8080
+
+---
+# Bookings Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookings
+spec:
+  type: NodePort
+  selector:
+    app: bookings
+  ports:
+  - port: 8080
+    targetPort: 8080

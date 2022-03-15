@@ -1,0 +1,50 @@
+version: "3.9"
+
+x-aws-vpc: ${VPC_ID}
+x-aws-loadbalancer: ${ALB_ID}
+
+services:
+  users:
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-users:${USERS_TAG}
+    ports:
+      - '${USERS_PORT}:${USERS_PORT}'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=${USERS_PORT}
+
+  flights:
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-flights:${FLIGHTS_TAG}
+    ports:
+      - '${FLIGHTS_PORT}:${FLIGHTS_PORT}'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=${FLIGHTS_PORT}
+
+  bookings:
+    image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-bookings:${BOOKINGS_TAG}
+    ports:
+      - '${BOOKINGS_PORT}:${BOOKINGS_PORT}'
+    environment:
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USER}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
+      - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
+      - SERVER_PORT=${BOOKINGS_PORT}
+
+x-aws-cloudformation:
+  Resources:
+    UsersService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }
+    FlightsService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }
+    BookingsService:
+      Properties:
+        NetworkConfiguration:
+          AwsvpcConfiguration: { Subnets: [ $SUBNET_1, $SUBNET_2, $SUBNET_3 ] }

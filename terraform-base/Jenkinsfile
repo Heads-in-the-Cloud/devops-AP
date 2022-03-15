@@ -1,0 +1,57 @@
+#!/bin/groovy
+
+pipeline {
+    agent any
+
+    environment {
+        AWS = credentials('AWS-Key')
+        AWS_REGION = credentials('AWS-Region')
+        SECRET_URL = credentials('Terraform-Secrets')
+
+        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
+        def output = sh(returnStdout: true, script: aws_script)
+        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+
+        TF_VAR_vpc_cidr = aws_secrets["vpc_cidr"].toString()
+        TF_VAR_availability_zone = aws_secrets["availability_zones"].toString()
+
+        TF_VAR_public_subnet = aws_secrets["public_subnets"].toString()
+        TF_VAR_private_subnet = aws_secrets["private_subnets"].toString()
+
+        TF_VAR_nat_ip = aws_secrets["nat_ip"].toString()
+
+        TF_VAR_route53_zone_id = aws_secrets["route53_zone_id"].toString()
+        TF_VAR_aws_user_id = aws_secrets["aws_user_id"].toString()
+
+        TF_VAR_ecs_record = aws_secrets["ecs_url"].toString()
+        TF_VAR_eks_record = aws_secrets["eks_url"].toString()
+
+        TF_VAR_resource_secret_name = aws_secrets["resource_secret_name"].toString()
+    }
+
+    stages {
+        stage('GitHub Fetch') { steps{
+            echo(message: 'GitHub Fetch!')
+            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+        }}
+
+        stage('Terraform Plan') { steps{
+            echo(message: 'Terraform Plan!')
+            dir("./terraform-base") {
+                sh(script: "terraform init -no-color")
+                sh(script: "terraform plan -no-color -out ../plan.tf")
+            }
+        }}
+
+        stage('Terraform Apply') {
+            steps{
+            echo(message: 'Terraform Apply!')
+            dir("./terraform-base") {
+                sh(script: 'terraform apply -no-color -auto-approve ../plan.tf')
+            }
+        }}
+    }
+    post { always {
+        echo(message: 'Wow!')
+    }}
+}

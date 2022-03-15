@@ -1,0 +1,103 @@
+#!/bin/groovy
+
+pipeline {
+    agent any
+
+    parameters {
+        booleanParam(
+            name: 'Deploy',
+            description: 'Determines whether to deploy or to destroy the ECS cluster',
+            defaultValue: false
+        )
+        booleanParam(
+            name: 'OnlyRestart',
+            description: 'Does a check for the status of the cluster first before restarting',
+            defaultValue: true
+        )
+    }
+
+    environment {
+        AWS = credentials('AWS-Key')
+        AWS_REGION = credentials('AWS-Region')
+        ECS_SECRETS_URL = credentials('AWS-ECS-Secrets')
+        RESOURCE_SECRETS_URL = credentials('Resource-IDs')
+
+        def ecs_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $ECS_SECRETS_URL --region $AWS_REGION")
+        def ecs_secrets = readJSON(text: readJSON(text: ecs_output).SecretString)
+
+        def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
+        def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
+
+        COMPOSE_PROJECT_NAME = ecs_secrets["COMPOSE_PROJECT_NAME"].toString()
+
+        VPC_ID = resource_secrets["VPC_ID"].toString()
+        ALB_ID = resource_secrets["ECS_LB_ID"].toString()
+
+        SPRING_DATASOURCE_URL = ecs_secrets["SPRING_DATASOURCE_URL"].toString()
+        MYSQL_USER = ecs_secrets["MYSQL_USER"].toString()
+        MYSQL_PASSWORD = ecs_secrets["MYSQL_PASSWORD"].toString()
+
+        AWS_USER_ID = ecs_secrets["AWS_USER_ID"].toString()
+
+        USERS_TAG = ecs_secrets["USERS_TAG"].toString()
+        FLIGHTS_TAG = ecs_secrets["FLIGHTS_TAG"].toString()
+        BOOKINGS_TAG = ecs_secrets["BOOKINGS_TAG"].toString()
+
+        USERS_PORT = ecs_secrets["USERS_PORT"].toString()
+        FLIGHTS_PORT = ecs_secrets["FLIGHTS_PORT"].toString()
+        BOOKINGS_PORT = ecs_secrets["BOOKINGS_PORT"].toString()
+
+        SUBNET_1 = resource_secrets["PRIVATE_SUBNET_IDS"][0].toString()
+        SUBNET_2 = resource_secrets["PRIVATE_SUBNET_IDS"][1].toString()
+        SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
+
+        DOCKER_CMD = "/usr/local/bin/docker"
+    }
+
+    stages {
+        stage('Setup Docker Context') { steps{ script{
+            def status = sh(returnStatus: true, script: '$DOCKER_CMD context ls | grep aws_context')
+            if (status != 0) {
+                echo(message: 'AWS context does not exist!')
+                sh(script: "$DOCKER_CMD context create ecs --from-env aws_context")
+            }
+
+            sh(script: '$DOCKER_CMD context use aws_context')
+            sh(script: "aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com")
+        }}}
+        stage('GitHub Fetch') { steps{
+            echo(message: 'GitHub Fetch!')
+            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+        }}
+
+        // Conditional deployment
+        stage('Deploy ECS') { when { expression { params.Deploy && !params.OnlyRestart }}
+            steps {
+            dir(path: './ecs-context') {
+                sh(script: "$DOCKER_CMD compose up")
+            }
+        }}
+        stage('Restart ECS service') { when { expression { params.Deploy && params.OnlyRestart }}
+            steps {
+            dir(path: './ecs-context') { script{
+                def status = sh(returnStatus: true, script: '$DOCKER_CMD compose ps | grep $COMPOSE_PROJECT_NAME')
+                if (status != 0) {
+                    echo(message: 'Cluster is down so no need to restart services.')
+                } else {
+                    sh(script: "$DOCKER_CMD compose up")
+                }
+            }}
+        }}
+
+        // Destroy ECS
+        stage('Takedown ECS') { when { expression { !params.Deploy }}
+            steps {
+            dir(path: './ecs-context') {
+                sh(script: "$DOCKER_CMD compose down")
+            }
+        }}
+    }
+    post { always {
+        sh(script: "$DOCKER_CMD context use default")
+    }}
+}
