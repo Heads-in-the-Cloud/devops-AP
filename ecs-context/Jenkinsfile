@@ -27,7 +27,6 @@ pipeline {
 
         def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
         def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
-        def subnets = readJSON(text: resource_secrets["PRIVATE_SUBNET_IDS"])
 
         COMPOSE_PROJECT_NAME = ecs_secrets["COMPOSE_PROJECT_NAME"].toString()
 
@@ -48,9 +47,9 @@ pipeline {
         FLIGHTS_PORT = ecs_secrets["FLIGHTS_PORT"].toString()
         BOOKINGS_PORT = ecs_secrets["BOOKINGS_PORT"].toString()
 
-        SUBNET_1 = subnets[0].toString()
-        SUBNET_2 = subnets[1].toString()
-        SUBNET_3 = subnets[2].toString()
+        SUBNET_1 = resource_secrets["PRIVATE_SUBNET_IDS"][0].toString()
+        SUBNET_2 = resource_secrets["PRIVATE_SUBNET_IDS"][1].toString()
+        SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
 
         DOCKER_CMD = "/usr/local/bin/docker"
     }
