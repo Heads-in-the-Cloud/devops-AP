@@ -1,0 +1,43 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: ${CLUSTER_NAME}
+  region: ${AWS_REGION}
+  version: "1.21"
+
+iam:
+  vpcResourceControllerPolicy: true
+  withOIDC: false
+
+vpc:
+  id: ${VPC_ID}
+  subnets:
+    private:
+      us-east-2a: { id: ${PRIVATE_SUBNET_1} }
+      us-east-2b: { id: ${PRIVATE_SUBNET_2} }
+      us-east-2c: { id: ${PRIVATE_SUBNET_3} }
+    public:
+      us-east-2a: { id: ${PUBLIC_SUBNET_1} }
+      us-east-2b: { id: ${PUBLIC_SUBNET_2} }
+      us-east-2c: { id: ${PUBLIC_SUBNET_3} }
+
+# fargateProfiles:
+#   - name: ap-fargate
+#     selectors:
+#       - namespace: default
+#       - namespace: kube-system
+#       - namespace: nginx-ingress
+
+managedNodeGroups:
+  - name: ${NODE_GROUP}
+    instanceType: ${NODE_TYPE}
+    maxSize: ${NODE_COUNT}
+    minSize: ${NODE_COUNT}
+    desiredCapacity: ${NODE_COUNT}
+    labels:
+      alpha.eksctl.io/cluster-name: ${CLUSTER_NAME}
+      alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
+    tags:
+      alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
+      alpha.eksctl.io/nodegroup-type: managed

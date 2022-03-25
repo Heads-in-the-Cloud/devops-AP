@@ -10,7 +10,7 @@ metadata:
       serviceName=bookings-svc rewrite=/
 spec:
   rules:
-    - host: "*.elb.amazonaws.com"
+    - host: "*.hitec.link"
       http:
         paths:
           - path: "/users-api/"
@@ -18,19 +18,16 @@ spec:
             backend:
               service:
                 name: users-svc
-                port:
-                  number: 8080
+                port: {number: 8080}
           - path: "/flights-api/"
             pathType: Prefix
             backend:
               service:
                 name: flights-svc
-                port:
-                  number: 8080
+                port: {number: 8080}
           - path: "/bookings-api/"
             pathType: Prefix
             backend:
               service:
                 name: bookings-svc
-                port:
-                  number: 8080
+                port: {number: 8080}
