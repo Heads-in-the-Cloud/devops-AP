@@ -1,0 +1,25 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - route53:
+        state: get
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_url }}"
+        type: A
+      register: r53_info
+    - ec2_instance_facts: { filters: { "tag:Name": "{{ jenkins_tag }}" } }
+      register: ec2_info
+    - debug: { msg: Large Jenkins instance is routed correctly! }
+      when: r53_info.set.value == ec2_info.instances[0].public_ip_address
+    - debug:
+        msg: "r53, ec2: {{ r53_info.set.value }} != {{ ec2_info.instances[0].public_ip_address }}"
+      when: r53_info.set.value != ec2_info.instances[0].public_ip_address
+    - route53:
+        state: present
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_url }}"
+        type: A
+        value: "{{ ec2_info.instances[0].public_ip_address }}"
+        overwrite: true
+      when: r53_info.set.value != ec2_info.instances[0].public_ip_address

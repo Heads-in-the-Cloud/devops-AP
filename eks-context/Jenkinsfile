@@ -20,10 +20,14 @@ pipeline {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
         SECRET_URL = credentials('AWS-EKS-Secrets')
+        RESOURCE_SECRETS_URL = credentials('Resource-IDs')
 
         def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
         def output = sh(returnStdout: true, script: aws_script)
         def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+
+        def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
+        def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
 
         CLUSTER_NAME = "ap-eks-cluster"
 
@@ -35,6 +39,16 @@ pipeline {
 
         KMS_KEY = aws_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
+
+        VPC_ID = resource_secrets["VPC_ID"].toString()
+
+        PUBLIC_SUBNET_1 = resource_secrets["PUBLIC_SUBNET_IDS"][0].toString()
+        PUBLIC_SUBNET_2 = resource_secrets["PUBLIC_SUBNET_IDS"][1].toString()
+        PUBLIC_SUBNET_3 = resource_secrets["PUBLIC_SUBNET_IDS"][2].toString()
+
+        PRIVATE_SUBNET_1 = resource_secrets["PRIVATE_SUBNET_IDS"][0].toString()
+        PRIVATE_SUBNET_2 = resource_secrets["PRIVATE_SUBNET_IDS"][1].toString()
+        PRIVATE_SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
     }
 
     stages {
@@ -55,7 +69,8 @@ pipeline {
 
             dir(path: './eks-context') {
                 echo(message: 'Deploying Messages!')
-                sh(script: "$EKSCTL_CMD create cluster --name $CLUSTER_NAME --region $AWS_REGION --nodegroup-name $NODE_GROUP --node-type $NODE_TYPE --nodes $NODE_COUNT")
+                sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create -f -")
+                //sh(script: "$EKSCTL_CMD create cluster --name $CLUSTER_NAME --region $AWS_REGION --nodegroup-name $NODE_GROUP --node-type $NODE_TYPE --nodes $NODE_COUNT")
                 sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
 
                 // Applying NGINX Ingress Configs
