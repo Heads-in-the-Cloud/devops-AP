@@ -1,0 +1,77 @@
+---
+# Creating the jenkins ec2 instance
+- hosts: localhost
+  connection: local
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_secret_region }}"
+  tasks:
+    - ec2_instance_info:
+        filters:
+          "tag:Name": AP_Ansible_Jenkins
+          "instance-state-name": running
+      register: jenkins_existance
+
+    - ec2_group:
+        state: present
+        name: "Jenkins Security Group"
+        description: "Security group for the Jenkins server"
+        vpc_id: "{{ vpc_id }}"
+        rules:
+          - proto: tcp
+            from_port: 22
+            to_port: 22
+            cidr_ip: 0.0.0.0/0
+          - proto: tcp
+            from_port: 8080
+            to_port: 8082
+            cidr_ip: 0.0.0.0/0
+          - proto: icmp
+            from_port: -1
+            to_port: -1
+            cidr_ip: 0.0.0.0/0
+        rules_egress:
+          - proto: all
+            from_port: 0
+            to_port: 0
+            cidr_ip: 0.0.0.0/0
+        tags:
+          Name: "{{ jenkins_sg_name }}"
+      register: jenkins_sg
+
+    - name: create the jenkins ec2
+      ec2:
+        image: "{{ jenkins_image }}"
+        instance_type: "{{ jenkins_ec2_type }}"
+        key_name: "{{ jenkins_kms_key }}"
+        wait: yes
+        state: present
+        assign_public_ip: yes
+        vpc_subnet_id: "{{ subnet_id }}"
+        private_ip: "{{ jenkins_ip }}"
+        group: "{{ jenkins_sg.group_name }}"
+        instance_tags:
+          Name: AP_Ansible_Jenkins
+      register: jenkins_ec2
+      when: jenkins_existance.instances | length == 0
+
+    - name: create the jenkins
+      route53:
+        state: present
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_url }}"
+        type: A
+        value: "{{ jenkins_ec2.instances[0].public_ip }}"
+        overwrite: true
+      when: jenkins_existance.instances | length == 0
+
+    - name: create route 53 url
+      route53:
+        state: present
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_url }}"
+        type: A
+        value: "{{ jenkins_existance.instances[0].public_ip_address }}"
+        overwrite: true
+      when: jenkins_existance.instances | length > 0

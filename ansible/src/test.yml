@@ -1,0 +1,35 @@
+---
+- hosts: jenkins
+  gather_facts: no
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_secret_region }}"
+    AWS_SERVICES_SECRET: "{{ aws_secret_services }}"
+    AWS_ECS_SECRET: "{{ aws_ecs_secret }}"
+    AWS_EKS_SECRET: "{{ aws_eks_secret }}"
+    TERRAFORM_SECRET: "{{ terraform_secret }}"
+    SONARQUBE_TOKEN: "{{ sonarqube_token }}"
+    SONARQUBE_URL: "{{ sonarqube_url }}"
+    JENKINS_URL: "{{ jenkins_url }}"
+    JENKINS_USER_ID: "{{ jenkins_user_id }}"
+    JENKINS_PASSWORD: "{{ jenkins_password }}"
+    JENKINS_API_TOKEN: 14e2ce421f074b90a34188bfcb2fa468
+    JENKINS_HOME: "/var/lib/jenkins"
+    RESOURCE_ID: "{{ resource_secret_name }}"
+    ANSIBLE_STDOUT_CALLBACK: debug
+    JAVA_HOME: /usr/bin/java
+  tasks:
+    - shell: |
+        which java
+        java -version
+    - shell: export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+      become: yes
+    - shell: sudo cat {{ jenkins_api_token }}
+    - shell: echo $RESOURCE_ID
+    - name: copy jenkins yaml config
+      copy:
+        src: ./jenkins-src/jenkins_config.yaml
+        dest: ./jenkins_b.yaml
+    - shell: |
+        cat jenkins_b.yaml | envsubst > jenkins.yaml

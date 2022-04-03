@@ -1,0 +1,258 @@
+---
+# Configuring the jenkins ec2 instance
+- hosts: jenkins
+  gather_facts: no
+  become: yes
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_secret_region }}"
+    AWS_SERVICES_SECRET: "{{ aws_secret_services }}"
+    AWS_ECS_SECRET: "{{ aws_ecs_secret }}"
+    AWS_EKS_SECRET: "{{ aws_eks_secret }}"
+    JENKINS_URL: "{{ jenkins_url }}"
+    JENKINS_USER_ID: "{{ jenkins_user_id }}"
+    JENKINS_HOME: "{{ jenkins_home }}"
+    SONARQUBE_TOKEN: "{{ sonarqube_token }}"
+    SONARQUBE_URL: "{{ sonarqube_url }}"
+    TERRAFORM_SECRET: "{{ terraform_secret }}"
+    RESOURCE_ID: "{{ resource_secret_name }}"
+  tasks:
+    - name: Install dependencies
+      block:
+        - name: install epel
+          shell: amazon-linux-extras install epel -y
+        - name: checking updates
+          yum:
+            state: latest
+          check_mode: yes
+        - name: install yum-utils
+          yum:
+            name: yum-utils
+            state: present
+        - name: add hashicorp repo
+          get_url:
+            url: https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
+            dest: /etc/yum.repos.d/hashicorp.repo
+    - name: Installing Jenkins and dependencies
+      block:
+        - name: install jenkins repo
+          shell: wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        - name: update rpm key
+          rpm_key:
+            state: present
+            key: https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+        - name: update yum packages to latest
+          yum:
+            name: '*'
+            state: latest
+        - name: install yum packages
+          yum:
+            name:
+              - jenkins
+              - git
+              - docker
+              - terraform
+              - jq
+              - pip
+            state: present
+        - name: pip install jinja2
+          pip:
+            name: jinja2-cli
+        - name: install java
+          shell: amazon-linux-extras install "{{java_install}}" -y
+    - name: Installing Kubernetes and dependencies
+      block:
+        - name: add kubernetes repo to yum repos
+          copy:
+            src: ./jenkins-src/kubernetes.repo
+            dest: /etc/yum.repos.d/kubernetes.repo
+        - name: install kubernetes utilities
+          yum:
+            name:
+              - kubelet
+              - kubeadm
+              - kubectl
+            state: present
+        - name: install eksctl
+          unarchive:
+            src: https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_Linux_amd64.tar.gz
+            dest: /usr/local/bin
+            remote_src: yes
+    - name: Services
+      block:
+        - name: reload systemctl daemon
+          systemd:
+            daemon_reload: yes
+        - name: start docker service
+          service:
+            name: docker
+            state: started
+        - name: start jenkins service
+          service:
+            name: jenkins
+            state: started
+        - name: wait for jenkins
+          uri:
+            url: http://localhost:8080
+            status_code: 403
+          register: result
+          until: result.status == 403
+          retries: 90
+          delay: 10
+        - name: add jenkins user to docker user group
+          user:
+            name: jenkins
+            groups: docker
+            append: yes
+    - name: Remove Setup Wizard
+      block:
+        - name: remove jenkins setup wizard
+          shell: |
+            JAVA_OPTIONS='JENKINS_JAVA_OPTIONS="-Djava.awt.headless=true -Djenkins.install.runSetupWizard=false"'
+            REGEX_PAT='JENKINS_JAVA_OPTIONS=.*'
+
+            sudo cat /etc/sysconfig/jenkins | sed 's/'"$REGEX_PAT"'/'"$JAVA_OPTIONS"'/1' | sudo tee ./somefile.txt >/dev/null
+            cat ./somefile.txt | sudo tee /etc/sysconfig/jenkins >/dev/null
+            rm ./somefile.txt
+        - name: restart jenkins
+          block:
+            - name: start jenkins service
+              service:
+                name: jenkins
+                state: restarted
+            - name: wait for jenkins
+              uri:
+                url: http://localhost:8080
+                status_code: 403
+              register: result
+              until: result.status == 403
+              retries: 90
+              delay: 10
+    - name: Jenkins CLI
+      block:
+        - name: downloads jenkins cli
+          get_url:
+            url: http://localhost:8080/jnlpJars/jenkins-cli.jar
+            dest: ./jenkins-cli.jar
+        - name: installing plugins
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            java -jar jenkins-cli.jar -s http://localhost:8080 install-plugin "{{item}}" -deploy
+          loop: "{{ lookup('file', 'jenkins-src/jenkins_plugins.txt').splitlines() }}"
+        - name: safe restart
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            java -jar jenkins-cli.jar -s http://localhost:8080 safe-restart
+        - name: copy jenkins yaml config
+          copy:
+            src: ./jenkins-src/jenkins_config.yaml
+            dest: "{{jenkins_home}}/jenkins_n.yaml"
+        - name:
+          shell: |
+            export JENKINS_PASSWORD=$(echo -n "{{jenkins_password}}" | base64 -d)
+            cat "{{jenkins_home}}"/jenkins_n.yaml | envsubst > "{{jenkins_home}}"/jenkins.yaml
+        - file:
+            state: absent
+            path: "{{jenkins_home}}/jenkins_n.yaml"
+        - name: restart jenkins
+          block:
+            - name: start jenkins service
+              service:
+                name: jenkins
+                state: restarted
+            - name: wait for jenkins
+              uri:
+                url: http://localhost:8080
+                status_code: 403
+              register: result
+              until: result.status == 403
+              retries: 90
+              delay: 10
+    - name: Create directories and xml template files
+      block:
+        - name: create configs directory
+          file:
+            path: "{{jenkins_home}}/configs"
+            state: directory
+        - name: create jenkins_jobs directory
+          file:
+            path: ./jenkins_jobs
+            state: directory
+        - name: create secrets directory
+          file:
+            path: ./secrets
+            state: directory
+        - name: create jenkins xml template
+          copy:
+            src: ./jenkins-src/jenkins_job.xml
+            dest: ./jenkins_job.xml
+        - name: create jenkins jobs definition
+          copy:
+            src: ./secrets/jenkins_jobs_def.json
+            dest: ./secrets/jenkins_jobs_def.json
+    - name: Services
+      block:
+        - name: creating jenkins service xml files
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            cat ./secrets/jenkins_jobs_def.json | jq .users | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/UsersPipeline.xml
+            cat ./secrets/jenkins_jobs_def.json | jq .flights | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/FlightsPipeline.xml
+            cat ./secrets/jenkins_jobs_def.json | jq .bookings | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/BookingsPipeline.xml
+        - name: creating jenkins service job pipelines
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            cat ./jenkins_jobs/UsersPipeline.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job UsersPipeline
+            cat ./jenkins_jobs/FlightsPipeline.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job FlightsPipeline
+            cat ./jenkins_jobs/BookingsPipeline.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job BookingsPipeline
+    - name: Deployments
+      block:
+        - name: creating jenkins deployment xml files
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            cat ./secrets/jenkins_jobs_def.json | jq .ecs_devops | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/ECSDeploy.xml
+            cat ./secrets/jenkins_jobs_def.json | jq .eks_devops | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/EKSDeploy.xml
+            cat ./secrets/jenkins_jobs_def.json | jq .terraform | jinja2 jenkins_job.xml - --format=json > ./jenkins_jobs/Terraform.xml
+        - name: creating jenkins deployment job pipelines
+          shell: |
+            export JENKINS_API_TOKEN=$(cat {{ jenkins_api_token }})
+            cat ./jenkins_jobs/ECSDeploy.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job ECSDeploy
+            cat ./jenkins_jobs/EKSDeploy.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job EKSDeploy
+            cat ./jenkins_jobs/Terraform.xml | java -jar jenkins-cli.jar -s http://localhost:8080 create-job Terraform
+        - name: restart jenkins
+          block:
+            - name: start jenkins service
+              service:
+                name: jenkins
+                state: restarted
+            - name: wait for jenkins
+              uri:
+                url: http://localhost:8080
+                status_code: 403
+              register: result
+              until: result.status == 403
+              retries: 90
+              delay: 10
+        - name: delete jenkins yaml config
+          file:
+            state: absent
+            path: "{{jenkins_home}}/jenkins.yaml"
+    - name: install docker compose v2
+      shell: |
+        export PATH=/usr/local/bin:$PATH
+        curl -L https://raw.githubusercontent.com/docker/compose-cli/main/scripts/install/install_linux.sh | sh
+    - name: Install KMS encrypt / decrypt scripts
+      block:
+        - name: install aws encryption sdk cli
+          pip:
+            name: aws-encryption-sdk-cli
+        - name: install kms bash encrypt script
+          copy:
+            src: ./jenkins-src/kms-encrypt.sh
+            dest: /usr/local/bin/kms-encrypt.sh
+            mode: a+x
+        - name: install kms bash decrypt script
+          copy:
+            src: ./jenkins-src/kms-decrypt.sh
+            dest: /usr/local/bin/kms-decrypt.sh
+            mode: a+x

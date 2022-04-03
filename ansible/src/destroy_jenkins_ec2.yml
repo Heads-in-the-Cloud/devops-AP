@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  connection: local
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_secret_region }}"
+  tasks:
+    - ec2_instance_info:
+        filters:
+          "tag:Name": AP_Ansible_Jenkins
+          "instance-state-name": running
+      register: jenkins_existance
+    - ec2_group_info:
+        filters:
+          "tag:Name": "{{ jenkins_sg_name }}"
+      register: jenkins_sgs
+    - route53:
+        state: get
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_url }}"
+        type: A
+      register: jenkins_r53
+    - name: deleting jenkins ec2
+      ec2:
+        state: absent
+        instance_ids: "{{ jenkins_existance.instances[0].instance_id }}"
+      when: jenkins_existance.instances | length > 0
+    - name: deleting ec2 security group
+      ec2_group:
+        state: absent
+        group_id: "{{ jenkins_sgs.security_groups[0].group_id }}"
+      when: jenkins_sgs.security_groups | length > 0
+    - name: deleting route53 record
+      route53:
+        state: absent
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ jenkins_r53.set.record }}"
+        ttl: "{{ jenkins_r53.set.ttl }}"
+        type: "{{ jenkins_r53.set.type }}"
+        value: "{{ jenkins_r53.set.value }}"
+      when: jenkins_r53.set | length > 0
