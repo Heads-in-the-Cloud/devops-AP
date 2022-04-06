@@ -1,6 +1,8 @@
 ---
 - hosts: localhost
   connection: local
+  environment:
+    AWS_REGION: "{{ aws_secret_region }}"
   tasks:
     - route53:
         state: get
