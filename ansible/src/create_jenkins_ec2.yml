@@ -75,3 +75,9 @@
         value: "{{ jenkins_existance.instances[0].public_ip_address }}"
         overwrite: true
       when: jenkins_existance.instances | length > 0
+
+    - name: Waiting for sonarqube r53 to be available
+      wait_for:
+        port: 22
+        host: "{{ jenkins_url }}"
+        delay: 300

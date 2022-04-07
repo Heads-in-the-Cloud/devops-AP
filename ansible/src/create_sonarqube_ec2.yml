@@ -75,6 +75,12 @@
         value: "{{ sonarqube_existance.instances[0].public_ip_address }}"
         overwrite: true
       when: sonarqube_existance.instances | length > 0
+
+    - name: Waiting for sonarqube r53 to be available
+      wait_for:
+        port: 22
+        host: "{{ sonarqube_url }}"
+        delay: 300
 - hosts: sonarqube
   gather_facts: no
   become: yes
