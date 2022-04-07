@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  connection: local
+  environment:
+    AWS_ACCESS_KEY: "{{ aws_access_key }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+    AWS_REGION: "{{ aws_secret_region }}"
+  tasks:
+    - ec2_instance_info:
+        filters:
+          "tag:Name": "{{ ec2_name }}"
+          "instance-state-name": running
+      register: sonarqube_existance
+    - ec2_group_info:
+        filters:
+          "tag:Name": "{{ sonarqube_sg_name }}"
+      register: sonarqube_sgs
+    - route53:
+        state: get
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ sonarqube_url }}"
+        type: A
+      register: sonarqube_r53
+    - name: deleting sonarqube ec2
+      ec2:
+        state: absent
+        instance_ids: "{{ sonarqube_existance.instances[0].instance_id }}"
+      when: sonarqube_existance.instances | length > 0
+    - name: deleting ec2 security group
+      ec2_group:
+        state: absent
+        group_id: "{{ sonarqube_sgs.security_groups[0].group_id }}"
+      when: sonarqube_sgs.security_groups | length > 0
+    - name: deleting route53 record
+      route53:
+        state: absent
+        zone: "{{ aws_route53_zone }}"
+        record: "{{ sonarqube_r53.set.record }}"
+        ttl: "{{ sonarqube_r53.set.ttl }}"
+        type: "{{ sonarqube_r53.set.type }}"
+        value: "{{ sonarqube_r53.set.value }}"
+      when: sonarqube_r53.set | length > 0

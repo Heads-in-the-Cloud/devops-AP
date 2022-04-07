@@ -189,8 +189,8 @@
             dest: ./jenkins_job.xml
         - name: create jenkins jobs definition
           copy:
-            src: ./secrets/jenkins_jobs_def.json
             dest: ./secrets/jenkins_jobs_def.json
+            content: "{{ jenkins_jobs_def }}"
     - name: Services
       block:
         - name: creating jenkins service xml files

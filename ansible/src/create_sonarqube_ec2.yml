@@ -1,5 +1,5 @@
 ---
-# Creating the jenkins ec2 instance
+# Creating the sonarqube ec2 instance
 - hosts: localhost
   connection: local
   environment:
@@ -11,12 +11,12 @@
         filters:
           "tag:Name": "{{ ec2_name }}"
           "instance-state-name": running
-      register: jenkins_existance
+      register: sonarqube_existance
 
     - ec2_group:
         state: present
-        name: "Jenkins Security Group"
-        description: "Security group for the Jenkins server"
+        name: "{{ sonarqube_sg_name }}"
+        description: "Security group for the SonarQube server"
         vpc_id: "{{ vpc_id }}"
         rules:
           - proto: tcp
@@ -24,8 +24,8 @@
             to_port: 22
             cidr_ip: 0.0.0.0/0
           - proto: tcp
-            from_port: 8080
-            to_port: 8082
+            from_port: 9000
+            to_port: 9000
             cidr_ip: 0.0.0.0/0
           - proto: icmp
             from_port: -1
@@ -37,41 +37,41 @@
             to_port: 0
             cidr_ip: 0.0.0.0/0
         tags:
-          Name: "{{ jenkins_sg_name }}"
-      register: jenkins_sg
+          Name: "{{ sonarqube_sg_name }}"
+      register: sonarqube_sg
 
-    - name: create the jenkins ec2
+    - name: create the sonarqube ec2
       ec2:
-        image: "{{ jenkins_image }}"
-        instance_type: "{{ jenkins_ec2_type }}"
-        key_name: "{{ jenkins_kms_key }}"
+        image: "{{ sonarqube_image }}"
+        instance_type: "{{ sonarqube_ec2_type }}"
+        key_name: "{{ sonarqube_kms_key }}"
         wait: yes
         state: present
         assign_public_ip: yes
         vpc_subnet_id: "{{ subnet_id }}"
-        private_ip: "{{ jenkins_ip }}"
-        group: "{{ jenkins_sg.group_name }}"
+        private_ip: "{{ sonarqube_ip }}"
+        group: "{{ sonarqube_sg.group_name }}"
         instance_tags:
           Name: "{{ ec2_name }}"
-      register: jenkins_ec2
-      when: jenkins_existance.instances | length == 0
+      register: sonarqube_ec2
+      when: sonarqube_existance.instances | length == 0
 
-    - name: create the jenkins
+    - name: create the sonarqube
       route53:
         state: present
         zone: "{{ aws_route53_zone }}"
-        record: "{{ jenkins_url }}"
+        record: "{{ sonarqube_url }}"
         type: A
-        value: "{{ jenkins_ec2.instances[0].public_ip }}"
+        value: "{{ sonarqube_ec2.instances[0].public_ip }}"
         overwrite: true
-      when: jenkins_existance.instances | length == 0
+      when: sonarqube_existance.instances | length == 0
 
     - name: create route 53 url
       route53:
         state: present
         zone: "{{ aws_route53_zone }}"
-        record: "{{ jenkins_url }}"
+        record: "{{ sonarqube_url }}"
         type: A
-        value: "{{ jenkins_existance.instances[0].public_ip_address }}"
+        value: "{{ sonarqube_existance.instances[0].public_ip_address }}"
         overwrite: true
-      when: jenkins_existance.instances | length > 0
+      when: sonarqube_existance.instances | length > 0
