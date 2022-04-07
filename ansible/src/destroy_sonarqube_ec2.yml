@@ -29,7 +29,7 @@
     - wait_for:
         host: sonarqube_existance.instances[0].public_ip_address
         state: stopped
-      when: jenkins_existance.instances | length > 0
+      when: sonarqube_existance.instances | length > 0
     - name: deleting ec2 security group
       ec2_group:
         state: absent
