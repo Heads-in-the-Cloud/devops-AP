@@ -75,3 +75,8 @@
         value: "{{ sonarqube_existance.instances[0].public_ip_address }}"
         overwrite: true
       when: sonarqube_existance.instances | length > 0
+- hosts: sonarqube
+  gather_facts: no
+  become: yes
+  tasks:
+    - shell: /opt/sonarqube/bin/linux-x86-64/sonar.sh start
