@@ -56,7 +56,7 @@
       register: sonarqube_ec2
       when: sonarqube_existance.instances | length == 0
 
-    - name: create the sonarqube
+    - name: create route 53 url from new instances
       route53:
         state: present
         zone: "{{ aws_route53_zone }}"
@@ -66,7 +66,7 @@
         overwrite: true
       when: sonarqube_existance.instances | length == 0
 
-    - name: create route 53 url
+    - name: create route 53 url from existing instances
       route53:
         state: present
         zone: "{{ aws_route53_zone }}"
@@ -80,7 +80,6 @@
       wait_for:
         port: 22
         host: "{{ sonarqube_url }}"
-        delay: 300
 - hosts: sonarqube
   gather_facts: no
   become: yes
