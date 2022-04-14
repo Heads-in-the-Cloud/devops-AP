@@ -40,10 +40,16 @@ credentials:
           id: "Terraform-Secrets"
           scope: "GLOBAL"
           secret: ${TERRAFORM_SECRET}
-      - string:
+      - usernamePassword:
           id: "Resource-IDs"
           scope: "GLOBAL"
           secret: ${RESOURCE_ID}
+      - string:
+          id: "JFrog-Artifactory"
+          scope: "GLOBAL"
+          username: "asoto22"
+          password: "${JENKINS_PASSWORD}"
+
 jenkins:
   systemMessage: "Jenkins configured automatically by Jenkins Configuration as Code plugin\n\n"
   views:
@@ -105,6 +111,15 @@ unclassified:
         triggers:
           skipScmCause: false
           skipUpstreamCause: false
+  artifactoryBuilder:
+    useCredentialsPlugin: true
+    jfrogInstances:
+    - instanceId: "ap-jfrog-artifactory"
+      platformUrl: "http://{ARTIFACTORY_URL}:8082"
+      artifactoryUrl: "http://{ARTIFACTORY_URL}:8082/artifactory"
+      distributionUrl: "http://{ARTIFACTORY_URL}:8082/distribution"
+      deployerCredentialsConfig:
+        credentialsId: "JFrog-Artifactory"
 tool:
   maven:
     installations:

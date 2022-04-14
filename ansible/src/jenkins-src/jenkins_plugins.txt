@@ -97,3 +97,4 @@ apache-httpcomponents-client-4-api
 authentication-tokens
 aws-credentials
 aws-java-sdk-ec2
+artifactory

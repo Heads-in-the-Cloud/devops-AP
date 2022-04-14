@@ -17,6 +17,7 @@
     SONARQUBE_URL: "{{ sonarqube_url }}"
     TERRAFORM_SECRET: "{{ terraform_secret }}"
     RESOURCE_ID: "{{ resource_secret_name }}"
+    ARTIFACTORY_URL: "{{ artifactory_url }}"
   tasks:
     - name: Install dependencies
       block:
