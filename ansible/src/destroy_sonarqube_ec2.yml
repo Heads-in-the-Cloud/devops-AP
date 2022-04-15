@@ -28,6 +28,7 @@
       when: sonarqube_existance.instances | length > 0
     - wait_for:
         host: sonarqube_existance.instances[0].public_ip_address
+        port: 22
         state: stopped
       when: sonarqube_existance.instances | length > 0
     - name: deleting ec2 security group
