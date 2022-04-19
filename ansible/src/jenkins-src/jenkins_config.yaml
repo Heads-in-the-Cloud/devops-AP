@@ -115,9 +115,9 @@ unclassified:
     useCredentialsPlugin: true
     jfrogInstances:
     - instanceId: "ap-jfrog-artifactory"
-      platformUrl: "http://{ARTIFACTORY_URL}:8082"
-      artifactoryUrl: "http://{ARTIFACTORY_URL}:8082/artifactory"
-      distributionUrl: "http://{ARTIFACTORY_URL}:8082/distribution"
+      platformUrl: "http://${ARTIFACTORY_URL}:8082"
+      artifactoryUrl: "http://${ARTIFACTORY_URL}:8082/artifactory"
+      distributionUrl: "http://${ARTIFACTORY_URL}:8082/distribution"
       deployerCredentialsConfig:
         credentialsId: "JFrog-Artifactory"
 tool:
