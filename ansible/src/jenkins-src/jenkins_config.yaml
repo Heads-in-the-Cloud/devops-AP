@@ -40,11 +40,11 @@ credentials:
           id: "Terraform-Secrets"
           scope: "GLOBAL"
           secret: ${TERRAFORM_SECRET}
-      - usernamePassword:
+      - string:
           id: "Resource-IDs"
           scope: "GLOBAL"
           secret: ${RESOURCE_ID}
-      - string:
+      - usernamePassword:
           id: "JFrog-Artifactory"
           scope: "GLOBAL"
           username: "asoto22"
