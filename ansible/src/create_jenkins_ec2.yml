@@ -53,6 +53,8 @@
         group: "{{ jenkins_sg.group_name }}"
         instance_tags:
           Name: "{{ ec2_name }}"
+          AUTO_DNS_NAME: "{{ jenkins_url }}"
+          EC2-Tag: "ap-jenkins"
       register: jenkins_ec2
       when: jenkins_existance.instances | length == 0
 
@@ -83,3 +85,7 @@
     - wait_for_connection:
         delay: 5
         timeout: 600
+  tasks:
+    - copy:
+        src: ./jenkins-src/r53-update.sh
+        dest: "/var/lib/cloud/scripts/per-boot/r53-update.sh"

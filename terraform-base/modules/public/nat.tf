@@ -23,7 +23,10 @@ resource "aws_instance" "nat" {
 
   availability_zone = var.availability_zone[count.index]
 
-  tags = { Name = format("AP_TF_NAT_%d", count.index) }
+  tags = {
+    Name = format("AP_TF_NAT_%d", count.index)
+    EC2-Tag = "Nat"
+  }
 }
 
 resource "aws_security_group" "nat" {

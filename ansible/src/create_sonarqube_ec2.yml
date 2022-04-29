@@ -53,6 +53,8 @@
         group: "{{ sonarqube_sg.group_name }}"
         instance_tags:
           Name: "{{ ec2_name }}"
+          AUTO_DNS_NAME: "{{ sonarqube_url }}"
+          EC2-Tag: "ap-sonarqube"
       register: sonarqube_ec2
       when: sonarqube_existance.instances | length == 0
 
@@ -84,3 +86,6 @@
         timeout: 600
   tasks:
     - shell: /opt/sonarqube/bin/linux-x86-64/sonar.sh start
+    - copy:
+        src: ./jenkins-src/r53-update.sh
+        dest: "/var/lib/cloud/scripts/per-boot/r53-update.sh"
