@@ -56,7 +56,6 @@ pipeline {
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
                 sh(script: 'go mod init github.com/gruntwork-io/terratest/modules/aws')
-                sh(script: 'go mod init github.com/stretchr/testify/assert')
                 sh(script: 'go mod init github.com/gruntwork-io/terratest/modules/terraform')
 
                 sh(script: 'go test -v -run TestTerraform -timeout 30m')
