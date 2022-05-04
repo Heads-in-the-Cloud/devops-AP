@@ -51,7 +51,7 @@ pipeline {
             }
         }}
 
-        stage("TerraTest") { when { expression { params.Deploy && params.OnlyTest }}
+        stage("TerraTest") { when { expression { params.OnlyTest }}
             steps{
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
@@ -71,7 +71,7 @@ pipeline {
             }
         }}
 
-        stage('Terraform Apply') { when { expression { params.Deploy && !params.OnlyTest }}
+        stage('Terraform Apply') { when { expression { !params.OnlyTest }}
             steps{
             echo(message: 'Terraform Apply!')
             dir("./terraform-base") {
