@@ -55,7 +55,7 @@ pipeline {
             steps{
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
-                sh(script: 'go clean -modcache')
+                sh(script: 'go clean --modcache')
                 sh(script: 'go mod tidy -timeout 2m')
                 sh(script: 'go test -v -run TestTerraform -timeout 30m')
             }
