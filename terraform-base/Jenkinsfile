@@ -49,7 +49,7 @@ pipeline {
                 sh(script: 'tflint --init --config=tflint.hcl')
                 sh(script: 'tflint --config=tflint.hcl')
             }
-        }
+        }}
 
         stage("TerraTest") { when { expression { params.Deploy && params.OnlyTest }}
             steps{
