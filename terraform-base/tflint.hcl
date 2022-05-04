@@ -1,7 +1,5 @@
 config {
     plugin_dir = ".tflint.d/plugins"
-
-    varfile = ["tfvars/input.tfvars"]
 }
 
 plugin "aws" {
