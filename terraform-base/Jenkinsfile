@@ -55,6 +55,7 @@ pipeline {
             steps{
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
+                sh(script: 'rm go.mod', returnStatus: true)
                 sh(script: 'go clean --modcache')
                 sh(script: 'go mod init terratest')
                 sh(script: 'go get -u ./...')
