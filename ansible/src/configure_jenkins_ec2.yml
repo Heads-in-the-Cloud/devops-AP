@@ -56,7 +56,10 @@
               - terraform
               - jq
               - pip
+              - golang
             state: present
+        - name: install tflint
+          raw: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
         - name: pip install jinja2
           pip:
             name: jinja2-cli

@@ -3,6 +3,14 @@
 pipeline {
     agent any
 
+    parameters {
+        booleanParam(
+            name: 'OnlyTest',
+            description: 'Tests the deployment and destroys it afterwards',
+            defaultValue: false
+        )
+    }
+
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
@@ -35,6 +43,26 @@ pipeline {
             git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
         }}
 
+        stage("TF Lint") { steps{
+            echo(message: 'Running TFLint verification:')
+            dir("./terraform-base") {
+                sh(script: 'tflint --init --config=tflint.hcl')
+                sh(script: 'tflint --config=tflint.hcl')
+            }
+        }
+
+        stage("TerraTest") { when { expression { params.Deploy && params.OnlyTest }}
+            steps{
+            echo(message: 'Running Terratest!')
+            dir("./terraform-base/terratest") {
+                sh(script: 'go mod init github.com/gruntwork-io/terratest/modules/aws')
+                sh(script: 'go mod init github.com/stretchr/testify/assert')
+                sh(script: 'go mod init github.com/gruntwork-io/terratest/modules/terraform')
+
+                sh(script: 'go test -v -run TestTerraform -timeout 30m')
+            }
+        }}
+
         stage('Terraform Plan') { steps{
             echo(message: 'Terraform Plan!')
             dir("./terraform-base") {
@@ -43,7 +71,7 @@ pipeline {
             }
         }}
 
-        stage('Terraform Apply') {
+        stage('Terraform Apply') { when { expression { params.Deploy && !params.OnlyTest }}
             steps{
             echo(message: 'Terraform Apply!')
             dir("./terraform-base") {
