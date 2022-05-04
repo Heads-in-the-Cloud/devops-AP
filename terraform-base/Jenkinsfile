@@ -57,7 +57,7 @@ pipeline {
             dir("./terraform-base/terratest") {
                 sh(script: 'go clean --modcache')
                 sh(script: 'go mod init terratest')
-                sh(script: 'go mod tidy')
+                sh(script: 'go get -u ./...')
                 sh(script: 'go test -v -run TestTerraform -timeout 30m')
             }
         }}
