@@ -3,9 +3,9 @@
 pipeline {
     agent any
 
-    tools {
-        go "Go 1.18.1"
-    }
+    // tools {
+    //     go "Go 1.18.1"
+    // }
 
     parameters {
         booleanParam(
@@ -59,13 +59,15 @@ pipeline {
             steps{
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
-                sh(script: 'rm go.mod', returnStatus: true)
-                sh(script: 'go clean --modcache')
+                sh(script: 'echo $LANG')
 
-                sh(script: 'go mod init terratest')
-                sh(script: 'go mod tidy -v')
+                // sh(script: 'rm go.mod', returnStatus: true)
+                // sh(script: 'go clean --modcache')
 
-                sh(script: 'go test -v -run TestTerraform -timeout 30m')
+                // sh(script: 'go mod init terratest')
+                // sh(script: 'go mod tidy -v')
+
+                // sh(script: 'go test -v -run TestTerraform -timeout 30m')
             }
         }}
 
