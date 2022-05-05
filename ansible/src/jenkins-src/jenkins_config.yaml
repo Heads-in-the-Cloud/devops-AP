@@ -123,7 +123,7 @@ unclassified:
 tool:
   go:
     installations:
-    - name: "Go 1.18.1"
+    - name: "1.18.1"
       properties:
       - installSource:
           installers:
