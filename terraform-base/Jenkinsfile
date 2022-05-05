@@ -18,7 +18,7 @@ pipeline {
     environment {
         LC_ALL = 'en_US.UTF-8'
         LANG = 'en_US.UTF-8'
-        LANGUAGE = e'n_US.UTF-8'
+        LANGUAGE = 'en_US.UTF-8'
 
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
