@@ -98,3 +98,4 @@ authentication-tokens
 aws-credentials
 aws-java-sdk-ec2
 artifactory
+golang

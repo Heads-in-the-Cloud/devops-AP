@@ -121,6 +121,14 @@ unclassified:
       deployerCredentialsConfig:
         credentialsId: "JFrog-Artifactory"
 tool:
+  go:
+    installations:
+    - name: "Go 1.18.1"
+      properties:
+      - installSource:
+          installers:
+          - golangInstaller:
+              id: "1.18.1"
   maven:
     installations:
     - name: "M3"

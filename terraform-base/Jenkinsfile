@@ -3,6 +3,10 @@
 pipeline {
     agent any
 
+    tools {
+        go "Go 1.18.1"
+    }
+
     parameters {
         booleanParam(
             name: 'OnlyTest',
