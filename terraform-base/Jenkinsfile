@@ -3,10 +3,6 @@
 pipeline {
     agent any
 
-    // tools {
-    //     go "Go 1.18.1"
-    // }
-
     parameters {
         booleanParam(
             name: 'OnlyTest',
@@ -16,6 +12,10 @@ pipeline {
     }
 
     environment {
+        LC_ALL = 'en_US.UTF-8'
+        LANG    = 'en_US.UTF-8'
+        LANGUAGE = 'en_US.UTF-8'
+
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
         SECRET_URL = credentials('Terraform-Secrets')
@@ -41,6 +41,10 @@ pipeline {
         TF_VAR_resource_secret_name = aws_secrets["resource_secret_name"].toString()
     }
 
+    tools {
+        go "Go 1.18.1"
+    }
+
     stages {
         stage('GitHub Fetch') { steps{
             echo(message: 'GitHub Fetch!')
@@ -59,15 +63,13 @@ pipeline {
             steps{
             echo(message: 'Running Terratest!')
             dir("./terraform-base/terratest") {
-                sh(script: 'echo $LANG')
+                sh(script: 'rm go.mod', returnStatus: true)
+                sh(script: 'go clean --modcache')
 
-                // sh(script: 'rm go.mod', returnStatus: true)
-                // sh(script: 'go clean --modcache')
+                sh(script: 'go mod init terratest')
+                sh(script: 'go mod tidy -v')
 
-                // sh(script: 'go mod init terratest')
-                // sh(script: 'go mod tidy -v')
-
-                // sh(script: 'go test -v -run TestTerraform -timeout 30m')
+                sh(script: 'go test -v -run TestTerraform -timeout 30m')
             }
         }}
 
