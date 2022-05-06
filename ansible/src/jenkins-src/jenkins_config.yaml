@@ -120,6 +120,8 @@ unclassified:
       distributionUrl: "http://${ARTIFACTORY_URL}:8082/distribution"
       deployerCredentialsConfig:
         credentialsId: "JFrog-Artifactory"
+  ansiColorBuildWrapper:
+    globalColorMapName: "xterm"
 tool:
   go:
     installations:
