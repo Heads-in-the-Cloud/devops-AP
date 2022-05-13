@@ -14,14 +14,26 @@ services:
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${USERS_PORT}
     logging:
-      driver: awsfirelens
+      driver: fluentd
       options:
-        Name: es
-        Host: ${ELK_URL}
-        Port: ${ELK_PORT}
-        Index: ${ELK_USERS}
+        fluentd-address: "users_router:24224"
   users_router:
-    image: "docker.io/amazon/aws-for-fluent-bit:latest"
+    image: fluent/fluent-bit:latest
+    command:
+      - |
+        cat <<EOF > /fluent-bit/etc/fluent-bit.conf
+        [INPUT]
+            Name    forward
+            Listen  0.0.0.0
+            Port    24224
+
+        [OUTPUT]
+            Name    es
+            Match   *
+            Host    ap-elk.hitec.link
+            Port    9200
+            Index   someIndex
+      - "/fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.conf"
     logging:
       driver: awslogs
       options:
@@ -39,22 +51,6 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${FLIGHTS_PORT}
-    logging:
-      driver: awsfirelens
-      options:
-        Name: es
-        Host: ${ELK_URL}
-        Port: ${ELK_PORT}
-        Index: ${ELK_FLIGHTS}
-  flights_router:
-    image: "docker.io/amazon/aws-for-fluent-bit:latest"
-    logging:
-      driver: awslogs
-      options:
-        awslogs-create-group: "true"
-        awslogs-group: ${AWS_LOG_GROUP}
-        awslogs-region: ${AWS_REGION}
-        awslogs-stream-prefix: ${ELK_FLIGHTS}
 
   bookings:
     image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-bookings:${BOOKINGS_TAG}
@@ -65,22 +61,6 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${BOOKINGS_PORT}
-    logging:
-      driver: awsfirelens
-      options:
-        Name: es
-        Host: ${ELK_URL}
-        Port: ${ELK_PORT}
-        Index: ${ELK_BOOKINGS}
-  bookings_router:
-    image: "docker.io/amazon/aws-for-fluent-bit:latest"
-    logging:
-      driver: awslogs
-      options:
-        awslogs-create-group: "true"
-        awslogs-group: ${AWS_LOG_GROUP}
-        awslogs-region: ${AWS_REGION}
-        awslogs-stream-prefix: ${ELK_BOOKINGS}
 
 x-aws-cloudformation:
   Resources:
