@@ -53,13 +53,6 @@ pipeline {
 
         AWS_LOG_GROUP= "/ecs/ap-logs/dev"
 
-        ELK_URL = "ap-elk.hitec.link"
-        ELK_PORT = "9200"
-
-        ELK_USERS = "users"
-        ELK_FLIGHTS = "flights"
-        ELK_BOOKINGS = "bookings"
-
         DOCKER_CMD = "/usr/local/bin/docker"
     }
 

@@ -14,35 +14,11 @@ services:
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${USERS_PORT}
     logging:
-      driver: syslog
-      options:
-        syslog-address: "udp://:24224"
-  users_router:
-    image: fluent/fluent-bit:latest
-    ports:
-      - 24224:24224
-    command:
-      - |
-        cat <<EOF > /fluent-bit/etc/fluent-bit.conf
-        [INPUT]
-            Name    forward
-            Listen  0.0.0.0
-            Port    24224
-
-        [OUTPUT]
-            Name    es
-            Match   *
-            Host    ap-elk.hitec.link
-            Port    9200
-            Index   someIndex
-      - "/fluent-bit/bin/fluent-bit -c /fluent-bit/etc/fluent-bit.conf"
-    logging:
       driver: awslogs
       options:
-        awslogs-create-group: "true"
         awslogs-group: ${AWS_LOG_GROUP}
         awslogs-region: ${AWS_REGION}
-        awslogs-stream-prefix: ${ELK_USERS}
+        awslogs-stream-prefix: users
 
   flights:
     image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-flights:${FLIGHTS_TAG}
@@ -53,6 +29,12 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${FLIGHTS_PORT}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-stream-prefix: flights
 
   bookings:
     image: ${AWS_USER_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/ap-bookings:${BOOKINGS_TAG}
@@ -63,6 +45,12 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD}
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${BOOKINGS_PORT}
+    logging:
+      driver: awslogs
+      options:
+        awslogs-group: ${AWS_LOG_GROUP}
+        awslogs-region: ${AWS_REGION}
+        awslogs-stream-prefix: bookings
 
 x-aws-cloudformation:
   Resources:
