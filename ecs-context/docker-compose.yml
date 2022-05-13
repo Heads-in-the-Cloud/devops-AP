@@ -14,11 +14,13 @@ services:
       - SPRING_DATASOURCE_URL=${SPRING_DATASOURCE_URL}
       - SERVER_PORT=${USERS_PORT}
     logging:
-      driver: fluentd
+      driver: syslog
       options:
-        fluentd-address: "users_router:24224"
+        syslog-address: "udp://:24224"
   users_router:
     image: fluent/fluent-bit:latest
+    ports:
+      - 24224:24224
     command:
       - |
         cat <<EOF > /fluent-bit/etc/fluent-bit.conf
