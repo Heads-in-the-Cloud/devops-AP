@@ -22,22 +22,22 @@ vpc:
       us-east-2b: { id: ${PUBLIC_SUBNET_2} }
       us-east-2c: { id: ${PUBLIC_SUBNET_3} }
 
-# fargateProfiles:
-#   - name: ap-fargate
-#     selectors:
-#       - namespace: default
-#       - namespace: kube-system
-#       - namespace: nginx-ingress
+fargateProfiles:
+  - name: ap-fargate
+    selectors:
+      - namespace: default
+      - namespace: kube-system
+      - namespace: ap-utopia
 
-managedNodeGroups:
-  - name: ${NODE_GROUP}
-    instanceType: ${NODE_TYPE}
-    maxSize: ${NODE_COUNT}
-    minSize: ${NODE_COUNT}
-    desiredCapacity: ${NODE_COUNT}
-    labels:
-      alpha.eksctl.io/cluster-name: ${CLUSTER_NAME}
-      alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
-    tags:
-      alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
-      alpha.eksctl.io/nodegroup-type: managed
+# managedNodeGroups:
+#   - name: ${NODE_GROUP}
+#     instanceType: ${NODE_TYPE}
+#     maxSize: ${NODE_COUNT}
+#     minSize: ${NODE_COUNT}
+#     desiredCapacity: ${NODE_COUNT}
+#     labels:
+#       alpha.eksctl.io/cluster-name: ${CLUSTER_NAME}
+#       alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
+#     tags:
+#       alpha.eksctl.io/nodegroup-name: ${NODE_GROUP}
+#       alpha.eksctl.io/nodegroup-type: managed

@@ -3,12 +3,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: users-svc
-  namespace: nginx-ingress
+  namespace: ap-utopia
 spec:
   selector:
     app: users
   ports:
-  - port: 8080
+  - port: 80
     targetPort: 8080
     protocol: TCP
 
@@ -18,12 +18,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: flights-svc
-  namespace: nginx-ingress
+  namespace: ap-utopia
 spec:
   selector:
     app: flights
   ports:
-  - port: 8080
+  - port: 80
     targetPort: 8080
     protocol: TCP
 
@@ -33,11 +33,11 @@ apiVersion: v1
 kind: Service
 metadata:
   name: bookings-svc
-  namespace: nginx-ingress
+  namespace: ap-utopia
 spec:
   selector:
     app: bookings
   ports:
-  - port: 8080
+  - port: 80
     targetPort: 8080
     protocol: TCP
