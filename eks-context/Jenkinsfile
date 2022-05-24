@@ -19,26 +19,29 @@ pipeline {
     environment {
         AWS = credentials('AWS-Key')
         AWS_REGION = credentials('AWS-Region')
-        SECRET_URL = credentials('AWS-EKS-Secrets')
+        EKSCTL_CMD = "/usr/local/bin/eksctl"
+
+        // --- Secrets Retrieval
+        SECRET_URL = credentials('AWS-Services-Secret')
+        EKS_SECRET_URL = credentials('AWS-EKS-Secrets')
         RESOURCE_SECRETS_URL = credentials('Resource-IDs')
 
-        def aws_script = "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION"
-        def output = sh(returnStdout: true, script: aws_script)
-        def aws_secrets = readJSON(text: readJSON(text: output).SecretString)
+        def aws_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION")
+        def aws_secrets = readJSON(text: readJSON(text: aws_output).SecretString)
+
+        def eks_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $EKS_SECRET_URL --region $AWS_REGION")
+        def eks_secrets = readJSON(text: readJSON(text: eks_output).SecretString)
 
         def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
         def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
 
-        CLUSTER_NAME = "ap-eks-cluster"
-
-        NODE_TYPE = aws_secrets['NODE_TYPE'].toString()
-        NODE_COUNT = aws_secrets['NODE_COUNT'].toString()
-        NODE_GROUP = aws_secrets['NODE_GROUP'].toString()
-
-        EKSCTL_CMD = "/usr/local/bin/eksctl"
-
-        KMS_KEY = aws_secrets['KMS_KEY'].toString()
+        KMS_KEY = eks_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
+
+        // --- EKS Environment Variables
+        CLUSTER_NAME = eks_secrets["CLUSTER_NAME"].toString()
+        NAMESPACE = eks_secrets["NAMESPACE"].toString()
+        HOSTNAME = eks_secrets["HOSTNAME"].toString()
 
         VPC_ID = resource_secrets["VPC_ID"].toString()
 
@@ -49,6 +52,21 @@ pipeline {
         PRIVATE_SUBNET_1 = resource_secrets["PRIVATE_SUBNET_IDS"][0].toString()
         PRIVATE_SUBNET_2 = resource_secrets["PRIVATE_SUBNET_IDS"][1].toString()
         PRIVATE_SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
+
+        // --- Image Repository Details
+        def repo_host = aws_secrets["AP-Repo-Host"].toString()
+
+        def users_repo = aws_secrets["AP-Users-Repo"].toString()
+        def flights_repo = aws_secrets["AP-Flights-Repo"].toString()
+        def bookings_repo = aws_secrets["AP-Bookings-Repo"].toString()
+
+        def users_tag = eks_secrets['users_tag'].toString()
+        def flight_tag = eks_secrets['flight_tag'].toString()
+        def bookings_tag = eks_secrets['bookings_tag'].toString()
+
+        USERS_IMAGE = "$repo_host/$users_repo:$users_tag"
+        FLIGHTS_IMAGE = "$repo_host/$flights_repo:$flight_tag"
+        BOOKINGS_IMAGE = "$repo_host/$bookings_repo:$bookings_tag"
     }
 
     stages {
@@ -67,32 +85,27 @@ pipeline {
                 }
             }
 
+            // --- Applying Kubernetes resources
             dir(path: './eks-context') {
                 echo(message: 'Deploying Messages!')
-                sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create -f -")
-                //sh(script: "$EKSCTL_CMD create cluster --name $CLUSTER_NAME --region $AWS_REGION --nodegroup-name $NODE_GROUP --node-type $NODE_TYPE --nodes $NODE_COUNT")
-                sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+                sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create --alb-ingress-acces -f -")
+                sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
 
-                // Applying NGINX Ingress Configs
-                sh(script: 'kubectl apply -f nginx_ingress/ns-and-sa.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/default-server-secret.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/nginx-config.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/ingress-class.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/rbac.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/nginx-ingress.yaml')
-                sh(script: 'kubectl apply -f nginx_ingress/loadbalancer-aws-elb.yaml')
+                // Applying AWS ALB Configs
+                sh(script: 'kubectl apply -f namespace.yml')
+                sh(script: 'kubectl apply -f rbac-role.yml')
+                sh(script: 'envsubst < alb-ingress-controller.yml | kubectl apply -f -')
 
-                // Apply Secrets
+                // Applying Secrets
                 sh(script: "$KMS_DECRYPT ./secrets.yml.encrypted ./secrets.yml")
 
-                // Launch Microservices
+                // Launching Microservices
                 sh(script: 'kubectl apply -f secrets.yml')
-                sh(script: 'kubectl apply -f deployments.yml')
+                sh(script: 'envsubst < deployments.yml | kubectl apply -f -')
                 sh(script: 'kubectl apply -f services.yml')
-                sh(script: 'kubectl apply -f ingress.yml')
+                sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
             }
         }}
-
         stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' }}
             steps { script{
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
@@ -101,7 +114,7 @@ pipeline {
                     error(message: 'Cluster is not up so no need to update the deployment!')
                 }
             }
-            sh(script: "kubectl config set-context --current --namespace=nginx-ingress")
+            sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
             sh(script: "kubectl rollout restart deployment ${params.Service}")
         }}
 

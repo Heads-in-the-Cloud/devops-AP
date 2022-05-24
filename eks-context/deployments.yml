@@ -3,7 +3,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: users
-  namespace: nginx-ingress
+  namespace: ap-utopia
   labels:
     app: users-microservice
 spec:
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: users
-        image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-users:latest
+        image: ${USERS_IMAGE}
         resources:
           limits:
             memory: "256Mi"
@@ -37,7 +37,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flights
-  namespace: nginx-ingress
+  namespace: ap-utopia
   labels:
     app: flights-microservice
 spec:
@@ -55,7 +55,7 @@ spec:
     spec:
       containers:
       - name: flights
-        image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-flights:latest
+        image: ${FLIGHTS_IMAGE}
         resources:
           limits:
             memory: "256Mi"
@@ -71,7 +71,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bookings
-  namespace: nginx-ingress
+  namespace: ap-utopia
   labels:
     app: bookings-microservice
 spec:
@@ -89,7 +89,7 @@ spec:
     spec:
       containers:
       - name: bookings
-        image: 902316339693.dkr.ecr.us-east-2.amazonaws.com/ap-bookings:latest
+        image: ${BOOKINGS_IMAGE}
         resources:
           limits:
             memory: "256Mi"
