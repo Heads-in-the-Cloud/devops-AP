@@ -112,7 +112,7 @@ pipeline {
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
 
-                script { ansibleTowerProjectSync(
+                script { ansibleTower(
                     towerServer: "Shared Ansible Tower",
                     jobTemplate: "Angel EKS Route53"
                 )}
@@ -144,7 +144,7 @@ pipeline {
             dir(path: './eks-context') {
                 sh(script: "envsubst < ingress.yml | kubectl apply -f -")
 
-                script { ansibleTowerProjectSync(
+                script { ansibleTower(
                     towerServer: "Shared Ansible Tower",
                     jobTemplate: "Angel EKS Route53"
                 )}
