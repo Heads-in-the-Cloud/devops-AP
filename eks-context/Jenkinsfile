@@ -111,6 +111,11 @@ pipeline {
                 sh(script: 'envsubst < deployments.yml | kubectl apply -f -')
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
+
+                script { ansibleTowerProjectSync(
+                    towerServer: "Shared Ansible Tower",
+                    jobTemplate: "Angel EKS Route53"
+                )}
             }
         }}
         stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
@@ -138,6 +143,11 @@ pipeline {
 
             dir(path: './eks-context') {
                 sh(script: "envsubst < ingress.yml | kubectl apply -f -")
+
+                script { ansibleTowerProjectSync(
+                    towerServer: "Shared Ansible Tower",
+                    jobTemplate: "Angel EKS Route53"
+                )}
             }
         }}
 
