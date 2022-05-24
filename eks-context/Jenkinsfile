@@ -72,7 +72,7 @@ pipeline {
     stages {
         stage('GitHub Fetch') { steps{
             echo(message: 'GitHub Fetch!')
-            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+            git(branch: 'feature-eks', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
         }}
 
         // Conditional deployment
