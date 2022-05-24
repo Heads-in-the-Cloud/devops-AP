@@ -55,7 +55,7 @@
               - docker
               - terraform
               - jq
-              - pip
+              - python3-pip
             state: present
         - name: install tflint
           raw: curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/install_linux.sh | bash
@@ -75,7 +75,7 @@
             name:
               - kubelet
               - kubeadm
-              - kubectl
+              - kubectl-1.23.6-0.x86_64
             state: present
         - name: install eksctl
           unarchive:
