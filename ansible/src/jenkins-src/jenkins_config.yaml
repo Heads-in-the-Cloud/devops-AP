@@ -122,6 +122,13 @@ unclassified:
         credentialsId: "JFrog-Artifactory"
   ansiColorBuildWrapper:
     globalColorMapName: "xterm"
+  ansibleTowerGlobalConfig:
+    towerInstallation:
+    - enableDebugging: false
+      towerCredentialsId: "JFrog-Artifactory"
+      towerDisplayName: "Shared Ansible Tower"
+      towerTrustCert: true
+      towerURL: "https://${TOWER_URL}"
 tool:
   go:
     installations:

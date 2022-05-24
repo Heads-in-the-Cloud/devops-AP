@@ -10,10 +10,10 @@
         record: "{{ elb_url }}"
         type: CNAME
       register: r53_info
-    - elb_classic_lb_facts:
+    - elb_application_lb_info:
       register: elb_info
     - debug:
-        msg: "{% for elb in elb_info.elbs %}\
+        msg: "{% for elb in elb_info.load_balancers %}\
             {% if elb.tags['kubernetes.io/cluster/ap-eks-cluster'] == 'owned' %}\
               {{ elb.dns_name }}\
             {% endif %}\

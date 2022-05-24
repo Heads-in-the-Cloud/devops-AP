@@ -12,7 +12,7 @@ pipeline {
         choice(
             name: 'Service',
             description: 'Determines which services to deploy / restart',
-            choices: [ 'all', 'users', 'flights', 'bookings' ]
+            choices: [ 'all', 'users', 'flights', 'bookings', 'ingress' ]
         )
     }
 
@@ -60,9 +60,9 @@ pipeline {
         def flights_repo = aws_secrets["AP-Flights-Repo"].toString()
         def bookings_repo = aws_secrets["AP-Bookings-Repo"].toString()
 
-        def users_tag = eks_secrets['users_tag'].toString()
-        def flight_tag = eks_secrets['flight_tag'].toString()
-        def bookings_tag = eks_secrets['bookings_tag'].toString()
+        def users_tag = eks_secrets['USERS_TAG'].toString()
+        def flight_tag = eks_secrets['FLIGHTS_TAG'].toString()
+        def bookings_tag = eks_secrets['FLIGHTS_TAG'].toString()
 
         USERS_IMAGE = "$repo_host/$users_repo:$users_tag"
         FLIGHTS_IMAGE = "$repo_host/$flights_repo:$flight_tag"
@@ -72,24 +72,31 @@ pipeline {
     stages {
         stage('GitHub Fetch') { steps{
             echo(message: 'GitHub Fetch!')
-            git(branch: 'dev', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
+            git(branch: 'feature-eks', url: 'https://github.com/Heads-in-the-Cloud/devops-AP.git')
         }}
 
         // Conditional deployment
         stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
-            steps { script{
-                // def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
-                // def status = sh(returnStatus: true, script: cluster_status )
-                // if (status == 0) {
-                //     error(message: 'EKS Cluster already exists!')
-                // }
+            steps {
+                script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 0) {
+                    // error(message: 'EKS Cluster already exists!')
+                    echo(message: 'EKS Cluster already Exists!')
+                } else {
+                    dir(path: './eks-context') {
+                        echo(message: 'Creating EKS Cluster since it does not exist!')
+                        sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                    }
+                }
             }
 
             // --- Applying Kubernetes resources
             dir(path: './eks-context') {
-                echo(message: 'Deploying Messages!')
-                // sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                echo(message: 'Deploying Resources!')
                 sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
+                sh(script: "aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION")
 
                 // Applying AWS ALB Configs
                 sh(script: 'kubectl apply -f namespace.yml')
@@ -104,9 +111,14 @@ pipeline {
                 sh(script: 'envsubst < deployments.yml | kubectl apply -f -')
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
+
+                script { ansibleTowerProjectSync(
+                    towerServer: "Shared Ansible Tower",
+                    jobTemplate: "Angel EKS Route53"
+                )}
             }
         }}
-        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' }}
+        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
             steps { script{
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
                 def status = sh(returnStatus: true, script: cluster_status )
@@ -116,6 +128,27 @@ pipeline {
             }
             sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
             sh(script: "kubectl rollout restart deployment ${params.Service}")
+        }}
+        stage('Restart Ingress / ALB') { when { expression { params.Deploy && params.Service != 'all' && params.Service == 'ingress' }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'Cluster is not up so no need to restart ingress')
+                }
+            }
+            sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
+            sh(script: "kubectl delete ingress -n $NAMESPACE eks-ingress")
+            sh(script: "kubectl rollout restart deployment alb-ingress-controller -n kube-system")
+
+            dir(path: './eks-context') {
+                sh(script: "envsubst < ingress.yml | kubectl apply -f -")
+
+                script { ansibleTowerProjectSync(
+                    towerServer: "Shared Ansible Tower",
+                    jobTemplate: "Angel EKS Route53"
+                )}
+            }
         }}
 
         // Destroy EKS
