@@ -16,7 +16,7 @@
         var: elb_info
     - debug:
         msg: "{% for elb in elb_info.load_balancers %}\
-            {% if elb.tags['kubernetes.io/cluster/ap-eks-cluster'] == 'owned' %}\
+            {% if elb.tags['kubernetes.io/cluster/ap-eks-cluster'] is defined %}\
               {{ elb.dns_name }}\
             {% endif %}\
           {% endfor %}"
