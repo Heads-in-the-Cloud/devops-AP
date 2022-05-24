@@ -12,7 +12,7 @@ pipeline {
         choice(
             name: 'Service',
             description: 'Determines which services to deploy / restart',
-            choices: [ 'all', 'users', 'flights', 'bookings' ]
+            choices: [ 'all', 'users', 'flights', 'bookings', 'ingress' ]
         )
     }
 
@@ -96,6 +96,7 @@ pipeline {
             dir(path: './eks-context') {
                 echo(message: 'Deploying Resources!')
                 sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
+                sh(script: "aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION")
 
                 // Applying AWS ALB Configs
                 sh(script: 'kubectl apply -f namespace.yml')
@@ -112,7 +113,7 @@ pipeline {
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
             }
         }}
-        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' }}
+        stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
             steps { script{
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
                 def status = sh(returnStatus: true, script: cluster_status )
@@ -122,6 +123,19 @@ pipeline {
             }
             sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
             sh(script: "kubectl rollout restart deployment ${params.Service}")
+        }}
+        stage('Restart Ingress / ALB') { when { expression { params.Deploy && params.Service != 'all' && params.Service == 'ingress' }}
+            steps { script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 1) {
+                    error(message: 'Cluster is not up so no need to restart ingress')
+                }
+            }
+            sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
+            sh(script: "kubectl delete ingress -n $NAMESPACE eks-ingress")
+            sh(script: "kubectl rollout restart deployment alb-ingress-controller -n kube-system")
+            sh(script: "envsubst < ingress.yml | kubectl apply -f -")
         }}
 
         // Destroy EKS
