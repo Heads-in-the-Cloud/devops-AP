@@ -85,8 +85,10 @@ pipeline {
                     // error(message: 'EKS Cluster already exists!')
                     echo(message: 'EKS Cluster already Exists!')
                 } else {
-                    echo(message: 'Creating EKS Cluster since it does not exist!')
-                    sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                    dir(path: './eks-context') {
+                        echo(message: 'Creating EKS Cluster since it does not exist!')
+                        sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                    }
                 }
             }
 
