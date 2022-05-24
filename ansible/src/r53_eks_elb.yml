@@ -13,6 +13,8 @@
     - elb_application_lb_info:
       register: elb_info
     - debug:
+        var: elb_info
+    - debug:
         msg: "{% for elb in elb_info.load_balancers %}\
             {% if elb.tags['kubernetes.io/cluster/ap-eks-cluster'] == 'owned' %}\
               {{ elb.dns_name }}\
