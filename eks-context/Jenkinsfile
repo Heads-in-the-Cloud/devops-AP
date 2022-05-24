@@ -60,9 +60,9 @@ pipeline {
         def flights_repo = aws_secrets["AP-Flights-Repo"].toString()
         def bookings_repo = aws_secrets["AP-Bookings-Repo"].toString()
 
-        def users_tag = eks_secrets['users_tag'].toString()
-        def flight_tag = eks_secrets['flight_tag'].toString()
-        def bookings_tag = eks_secrets['bookings_tag'].toString()
+        def users_tag = eks_secrets['USERS_TAG'].toString()
+        def flight_tag = eks_secrets['FLIGHTS_TAG'].toString()
+        def bookings_tag = eks_secrets['FLIGHTS_TAG'].toString()
 
         USERS_IMAGE = "$repo_host/$users_repo:$users_tag"
         FLIGHTS_IMAGE = "$repo_host/$flights_repo:$flight_tag"
