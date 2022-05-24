@@ -77,13 +77,14 @@ pipeline {
 
         // Conditional deployment
         stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
-            steps { script{
-                // def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
-                // def status = sh(returnStatus: true, script: cluster_status )
-                // if (status == 0) {
-                //     error(message: 'EKS Cluster already exists!')
-                // }
-            }
+            steps {
+            //     script{
+            //     def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+            //     def status = sh(returnStatus: true, script: cluster_status )
+            //     if (status == 0) {
+            //         error(message: 'EKS Cluster already exists!')
+            //     }
+            // }
 
             // --- Applying Kubernetes resources
             dir(path: './eks-context') {
