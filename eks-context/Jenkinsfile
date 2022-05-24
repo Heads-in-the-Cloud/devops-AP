@@ -78,18 +78,21 @@ pipeline {
         // Conditional deployment
         stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
             steps {
-            //     script{
-            //     def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
-            //     def status = sh(returnStatus: true, script: cluster_status )
-            //     if (status == 0) {
-            //         error(message: 'EKS Cluster already exists!')
-            //     }
-            // }
+                script{
+                def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
+                def status = sh(returnStatus: true, script: cluster_status )
+                if (status == 0) {
+                    // error(message: 'EKS Cluster already exists!')
+                    echo(message: 'EKS Cluster already Exists!')
+                } else {
+                    echo(message: 'Creating EKS Cluster since it does not exist!')
+                    sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                }
+            }
 
             // --- Applying Kubernetes resources
             dir(path: './eks-context') {
-                echo(message: 'Deploying Messages!')
-                // sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-access -f -")
+                echo(message: 'Deploying Resources!')
                 sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
 
                 // Applying AWS ALB Configs
