@@ -135,7 +135,10 @@ pipeline {
             sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
             sh(script: "kubectl delete ingress -n $NAMESPACE eks-ingress")
             sh(script: "kubectl rollout restart deployment alb-ingress-controller -n kube-system")
-            sh(script: "envsubst < ingress.yml | kubectl apply -f -")
+
+            dir(path: './eks-context') {
+                sh(script: "envsubst < ingress.yml | kubectl apply -f -")
+            }
         }}
 
         // Destroy EKS
