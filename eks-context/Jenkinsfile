@@ -88,7 +88,7 @@ pipeline {
             // --- Applying Kubernetes resources
             dir(path: './eks-context') {
                 echo(message: 'Deploying Messages!')
-                sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create --alb-ingress-acces -f -")
+                sh(script: "envsubst < cluster.yml | $EKSCTL_CMD create cluster --alb-ingress-acces -f -")
                 sh(script: "kubectl config set-context --current --namespace=$NAMESPACE")
 
                 // Applying AWS ALB Configs
