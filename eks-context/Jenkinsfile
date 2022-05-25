@@ -197,7 +197,7 @@ def UpdateR53() {
         get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}'").trim()
         def lb_status = sh(returnStatus: true, script: "echo '${get_eks_lb}' | grep 'Error from server (NotFound)'")
 
-        if (lb_status == 1) {
+        if (lb_status == 1 && get_eks_lb != "") {
             sh(script: """
             aws route53 change-resource-record-sets \
                 --hosted-zone-id ${zoneId} \
