@@ -112,10 +112,12 @@ pipeline {
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
 
-                script { ansibleTower(
-                    towerServer: "Shared Ansible Tower",
-                    jobTemplate: "Angel EKS Route53"
-                )}
+                UpdateR53();
+
+                // script { ansibleTower(
+                //     towerServer: "Shared Ansible Tower",
+                //     jobTemplate: "Angel EKS Route53"
+                // )}
             }
         }}
         stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
@@ -144,10 +146,11 @@ pipeline {
             dir(path: './eks-context') {
                 sh(script: "envsubst < ingress.yml | kubectl apply -f -")
 
-                script { ansibleTower(
-                    towerServer: "Shared Ansible Tower",
-                    jobTemplate: "Angel EKS Route53"
-                )}
+                // script { ansibleTower(
+                //     towerServer: "Shared Ansible Tower",
+                //     jobTemplate: "Angel EKS Route53"
+                // )}
+                UpdateR53()
             }
         }}
 
@@ -166,5 +169,43 @@ pipeline {
                 sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
             }
         }}
+    }
+}
+
+// --- --- Jenkins Methods --- ----
+def GetSecret(url, region) {
+    def script = "aws secretsmanager get-secret-value --secret-id $url --region $region"
+    def secret_value = sh(returnStdout: true, script: script)
+    def secret_string = readJSON(text: secret_value).SecretString
+    def secret_json = readJSON(text: secret_string)
+
+    return secret_json;
+}
+
+def UpdateR53() {
+    def terraform_secret = GetSecret(credentials("Terraform-Secrets"), AWS_REGION)
+
+    def zoneId = terraform_secret["route53_zone_id"].toString();
+    def record = terraform_secret["eks_url"].toString();
+
+    def get_r53_script = 'aws route53 list-resource-record-sets --hosted-zone-id Z0335660TF3AY4ZQWQ77 --query "ResourceRecordSets[?Name == `ap-eks-utopia.hitec.link.`]" | jq -r .[].ResourceRecords[].Value'
+    def current_r53_record = sh(returnStdout: true, script: get_r53_script)
+
+    String get_eks_lb = "";
+    while (get_eks_lb.equals("")) {
+        get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}')").trim()
+        def lb_status = sh(returnStatus: true, script: 'echo "${get_eks_lb}" | grep "Error from server (NotFound)"')
+
+        if (lb_status == 1) {
+            sh(script: """
+            aws route53 change-resource-record-sets \
+                --hosted-zone-id $zoneId \
+                --change-batch '{"Changes": [{"Action": "UPSERT","ResourceRecordSet": {"Name": "'$record'","Type": "CNAME","TTL": 300,"ResourceRecords": [{ "Value": "'$get_eks_lb'" }]}}]}'
+            """)
+        } else {
+            get_eks_lb = ""
+        }
+
+        sleep(time: 1, unit: 'SECONDS')
     }
 }
