@@ -27,14 +27,9 @@ pipeline {
         RESOURCE_SECRETS_URL = credentials('Resource-IDs')
         TERRAFORM_URL = credentials("Terraform-Secrets")
 
-        def aws_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION")
-        def aws_secrets = readJSON(text: readJSON(text: aws_output).SecretString)
-
-        def eks_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $EKS_SECRET_URL --region $AWS_REGION")
-        def eks_secrets = readJSON(text: readJSON(text: eks_output).SecretString)
-
-        def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
-        def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
+        def aws_secrets = getSecret(SECRET_URL, AWS_REGION)
+        def eks_secrets = getSecret(EKS_SECRET_URL, AWS_REGION)
+        def resource_secrets = getSecret(RESOURCE_SECRETS_URL, AWS_REGION)
 
         KMS_KEY = eks_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
@@ -78,8 +73,7 @@ pipeline {
 
         // Conditional deployment
         stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
-            steps {
-                script{
+            steps { script {
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
                 def status = sh(returnStatus: true, script: cluster_status )
                 if (status == 0) {
@@ -113,12 +107,7 @@ pipeline {
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
 
-                UpdateR53();
-
-                // script { ansibleTower(
-                //     towerServer: "Shared Ansible Tower",
-                //     jobTemplate: "Angel EKS Route53"
-                // )}
+                updateR53();
             }
         }}
         stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
@@ -146,12 +135,7 @@ pipeline {
 
             dir(path: './eks-context') {
                 sh(script: "envsubst < ingress.yml | kubectl apply -f -")
-
-                // script { ansibleTower(
-                //     towerServer: "Shared Ansible Tower",
-                //     jobTemplate: "Angel EKS Route53"
-                // )}
-                UpdateR53()
+                updateR53()
             }
         }}
 
@@ -174,7 +158,7 @@ pipeline {
 }
 
 // --- --- Jenkins Methods --- ----
-def GetSecret(url, region) {
+def getSecret(url, region) {
     def script = "aws secretsmanager get-secret-value --secret-id $url --region $region"
     def secret_value = sh(returnStdout: true, script: script)
     def secret_string = readJSON(text: secret_value).SecretString
@@ -183,17 +167,24 @@ def GetSecret(url, region) {
     return secret_json;
 }
 
-def UpdateR53() {
-    def terraform_secret = GetSecret(TERRAFORM_URL, AWS_REGION)
+def updateR53() {
+    echo(message: 'Updating Route 53 records function!')
+
+    def terraform_secret = getSecret(TERRAFORM_URL, AWS_REGION)
 
     def zoneId = terraform_secret["route53_zone_id"].toString();
     def record = terraform_secret["eks_url"].toString();
 
-    def get_r53_script = "aws route53 list-resource-record-sets --hosted-zone-id ${zoneId} --query 'ResourceRecordSets[?Name == `${record}.`]' | jq -r .[].ResourceRecords[].Value"
+    def get_r53_script = """
+        aws route53 list-resource-record-sets \
+            --hosted-zone-id ${zoneId} \
+            --query 'ResourceRecordSets[?Name == `${record}.`]' | jq -r .[].ResourceRecords[].Value"""
     def current_r53_record = sh(returnStdout: true, script: get_r53_script)
 
     String get_eks_lb = "";
     while (get_eks_lb.equals("")) {
+        echo(message: 'Trying to get load balancer and update r53...')
+
         get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}'").trim()
         def lb_status = sh(returnStatus: true, script: "echo '${get_eks_lb}' | grep 'Error from server (NotFound)'")
 
