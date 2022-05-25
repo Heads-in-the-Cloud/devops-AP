@@ -23,13 +23,16 @@
         #!/usr/bin/env bash
         set -euo pipefail
 
-        LB_ARN="$(aws elbv2 describe-load-balancers --region us-east-2 | jq .LoadBalancers | jq .[]?.LoadBalancerArn | jq -r)"
+        AWS=/usr/local/bin/aws
+        JQ=/usr/bin/jq
+
+        LB_ARN="$($AWS elbv2 describe-load-balancers --region us-east-2 | $JQ .LoadBalancers | $JQ .[]?.LoadBalancerArn | $JQ -r)"
         for i in $LB_ARN; do
-          TAGS="$(aws elbv2 describe-tags --resource-arns $i --region us-east-2 | jq .TagDescriptions[].Tags[].Key | jq -r)"
+          TAGS="$($AWS elbv2 describe-tags --resource-arns $i --region us-east-2 | $JQ .TagDescriptions[].Tags[].Key | $JQ -r)"
 
           for j in $TAGS; do
             if [ "$j" == "kubernetes.io/cluster/ap-eks-cluster" ]; then
-              DNS_NAME="$(aws elbv2 describe-load-balancers --region us-east-2 --load-balancer-arns "$i" | jq .LoadBalancers | jq -r .[]?.DNSName)"
+              DNS_NAME="$($AWS elbv2 describe-load-balancers --region us-east-2 --load-balancer-arns "$i" | $JQ .LoadBalancers | $JQ -r .[]?.DNSName)"
               if [ "$DNS_NAME" == "" ]; then
                 exit 1
               fi
