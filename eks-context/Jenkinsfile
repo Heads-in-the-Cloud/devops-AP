@@ -25,6 +25,7 @@ pipeline {
         SECRET_URL = credentials('AWS-Services-Secret')
         EKS_SECRET_URL = credentials('AWS-EKS-Secrets')
         RESOURCE_SECRETS_URL = credentials('Resource-IDs')
+        TERRAFORM_URL = credentials("Terraform-Secrets")
 
         def aws_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION")
         def aws_secrets = readJSON(text: readJSON(text: aws_output).SecretString)
@@ -183,12 +184,12 @@ def GetSecret(url, region) {
 }
 
 def UpdateR53() {
-    def terraform_secret = GetSecret(credentials("Terraform-Secrets"), AWS_REGION)
+    def terraform_secret = GetSecret(TERRAFORM_URL, AWS_REGION)
 
     def zoneId = terraform_secret["route53_zone_id"].toString();
     def record = terraform_secret["eks_url"].toString();
 
-    def get_r53_script = 'aws route53 list-resource-record-sets --hosted-zone-id Z0335660TF3AY4ZQWQ77 --query "ResourceRecordSets[?Name == `ap-eks-utopia.hitec.link.`]" | jq -r .[].ResourceRecords[].Value'
+    def get_r53_script = 'aws route53 list-resource-record-sets --hosted-zone-id $zoneId --query "ResourceRecordSets[?Name == `$record.`]" | jq -r .[].ResourceRecords[].Value'
     def current_r53_record = sh(returnStdout: true, script: get_r53_script)
 
     String get_eks_lb = "";
