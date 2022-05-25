@@ -189,19 +189,19 @@ def UpdateR53() {
     def zoneId = terraform_secret["route53_zone_id"].toString();
     def record = terraform_secret["eks_url"].toString();
 
-    def get_r53_script = 'aws route53 list-resource-record-sets --hosted-zone-id $zoneId --query "ResourceRecordSets[?Name == `$record.`]" | jq -r .[].ResourceRecords[].Value'
+    def get_r53_script = "aws route53 list-resource-record-sets --hosted-zone-id ${zoneId} --query 'ResourceRecordSets[?Name == `${record}.`]' | jq -r .[].ResourceRecords[].Value"
     def current_r53_record = sh(returnStdout: true, script: get_r53_script)
 
     String get_eks_lb = "";
     while (get_eks_lb.equals("")) {
         get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}')").trim()
-        def lb_status = sh(returnStatus: true, script: 'echo "${get_eks_lb}" | grep "Error from server (NotFound)"')
+        def lb_status = sh(returnStatus: true, script: "echo '${get_eks_lb}' | grep 'Error from server (NotFound)'")
 
         if (lb_status == 1) {
             sh(script: """
             aws route53 change-resource-record-sets \
-                --hosted-zone-id $zoneId \
-                --change-batch '{"Changes": [{"Action": "UPSERT","ResourceRecordSet": {"Name": "'$record'","Type": "CNAME","TTL": 300,"ResourceRecords": [{ "Value": "'$get_eks_lb'" }]}}]}'
+                --hosted-zone-id ${zoneId} \
+                --change-batch '{"Changes": [{"Action": "UPSERT","ResourceRecordSet": {"Name": "'${record}'","Type": "CNAME","TTL": 300,"ResourceRecords": [{ "Value": "'${get_eks_lb}'" }]}}]}'
             """)
         } else {
             get_eks_lb = ""
