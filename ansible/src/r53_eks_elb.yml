@@ -41,14 +41,14 @@
         done
         exit 1
       register: eks_elb_dns
-      until: eks_elb_dns | success
+      until: eks_elb_dns.rc == 0
     - debug: { msg: "r53 is not set to the correct value! It's set to: {{r53_info.set.value}}" }
-      when: r53_info.set.value != eks_elb_dns.msg
+      when: r53_info.set.value != eks_elb_dns.stdout
     - route53:
         state: present
         zone: "{{ aws_route53_zone }}"
         record: "{{ elb_url }}"
         type: CNAME
-        value: "{{ eks_elb_dns.msg }}"
+        value: "{{ eks_elb_dns.stdout }}"
         overwrite: true
-      when: r53_info.set.value != eks_elb_dns.msg
+      when: r53_info.set.value != eks_elb_dns.stdout
