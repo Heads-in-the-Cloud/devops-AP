@@ -24,20 +24,24 @@
         set -euo pipefail
 
         LB_ARN="$(aws elbv2 describe-load-balancers --region us-east-2 | jq .LoadBalancers | jq .[]?.LoadBalancerArn | jq -r)"
-
         for i in $LB_ARN; do
           TAGS="$(aws elbv2 describe-tags --resource-arns $i --region us-east-2 | jq .TagDescriptions[].Tags[].Key | jq -r)"
 
           for j in $TAGS; do
-            if [ "$j" == "Name" ]; then
-              echo -n "$i"
+            if [ "$j" == "kubernetes.io/cluster/ap-eks-cluster" ]; then
+              DNS_NAME="$(aws elbv2 describe-load-balancers --region us-east-2 --load-balancer-arns "$i" | jq .LoadBalancers | jq -r .[]?.DNSName)"
+              if [ "$DNS_NAME" == "" ]; then
+                exit 1
+              fi
+
+              echo -n $DNS_NAME
               exit 0
             fi
           done
         done
         exit 1
       register: eks_elb_dns
-      until: eks_elb_dns != ""
+      until: eks_elb_dns | success
     - debug: { msg: "r53 is not set to the correct value! It's set to: {{r53_info.set.value}}" }
       when: r53_info.set.value != eks_elb_dns.msg
     - route53:
