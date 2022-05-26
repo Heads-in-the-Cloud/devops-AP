@@ -63,6 +63,8 @@ pipeline {
         USERS_IMAGE = "$repo_host/$users_repo:$users_tag"
         FLIGHTS_IMAGE = "$repo_host/$flights_repo:$flight_tag"
         BOOKINGS_IMAGE = "$repo_host/$bookings_repo:$bookings_tag"
+
+        ELK_URL = "ap-elk.hitec.link"
     }
 
     stages {
@@ -106,6 +108,7 @@ pipeline {
                 sh(script: 'envsubst < deployments.yml | kubectl apply -f -')
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
+                sh(script: 'envsubst < fluent-bit.yml | kubectl apply -f -')
 
                 updateR53();
             }
