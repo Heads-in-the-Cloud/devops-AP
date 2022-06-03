@@ -1,0 +1,35 @@
+---
+- hosts: all
+  gather_facts: yes
+  become: yes
+  vars:
+    expected_certbot_version: "certbot {{ certbot_version }}"
+    expected_ssh_version: "OpenSSH_{{ openssh_version }}"
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    - debug:
+        msg: "{{ ansible_distribution }}"
+
+    - name: installing certbot and opessh clients
+      block:
+        - name: "(Ubuntu-Distro) installing certbot and openssh clients"
+          when: ansible_distribution == "Ubuntu"
+          apt:
+            name:
+              - "certbot={{ certbot_version }}{{ certbot_package_version }}"
+              - "openssh-client=1:{{ openssh_version }}{{ openssh_client_package_version }}"
+            state: present
+        - name: "(Amazon-Distro) installing certbot and openssh clients"
+          when: ansible_distribution == "Amazon" or ansible_distribution == "RedHat"
+          yum:
+            name:
+              - "certbot-{{ certbot_version }}{{ certbot_package_version }}"
+              - "openssh-clients-{{ openssh_version }}{{ openssh_client_package_version }}"
+            state: present
+
+    - name: verifying installation of certbot and opennssh client
+      deptesting:
+        state: present
+        certbot_version: "{{ expected_certbot_version }}"
+        ssh_version: "{{ expected_ssh_version }}"

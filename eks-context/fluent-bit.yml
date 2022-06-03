@@ -15,31 +15,14 @@ data:
   output.conf: |
     [OUTPUT]
       Name  es
-      Match *user*
+      Match *
       Host  $ELK_URL
       Port  9200
-      Index users-eks
-
-    [OUTPUT]
-      Name  es
-      Match *flight*
-      Host  $ELK_URL
-      Port  9200
-      Index flights-eks
-
-    [OUTPUT]
-      Name  es
-      Match *booking*
-      Host  $ELK_URL
-      Port  9200
-      Index bookings-eks
-
-    [OUTPUT]
-      Name  es
-      Match *kube*
-      Host  $ELK_URL
-      Port  9200
-      Index kube-eks
+      Logstash_Format     On
+      Logstash_Prefix_Key kubernetes['pod_name']
+      Replace_Dots        On
+      Retry_Limit         False
+      tls                 On
 
   parsers.conf: |
     [PARSER]
@@ -54,5 +37,8 @@ data:
       Name                  kubernetes
       Match                 kube.*
       Merge_Log             On
+      Merge_Log_Key         log_processed
+      K8S-Logging.Parser    On
+      Merge_Parser          spring
       Buffer_Size           0
       Kube_Meta_Cache_TTL   300s
