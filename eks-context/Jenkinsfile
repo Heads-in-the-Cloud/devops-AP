@@ -25,15 +25,11 @@ pipeline {
         SECRET_URL = credentials('AWS-Services-Secret')
         EKS_SECRET_URL = credentials('AWS-EKS-Secrets')
         RESOURCE_SECRETS_URL = credentials('Resource-IDs')
+        TERRAFORM_URL = credentials("Terraform-Secrets")
 
-        def aws_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $SECRET_URL --region $AWS_REGION")
-        def aws_secrets = readJSON(text: readJSON(text: aws_output).SecretString)
-
-        def eks_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $EKS_SECRET_URL --region $AWS_REGION")
-        def eks_secrets = readJSON(text: readJSON(text: eks_output).SecretString)
-
-        def resource_output = sh(returnStdout: true, script: "aws secretsmanager get-secret-value --secret-id $RESOURCE_SECRETS_URL --region $AWS_REGION")
-        def resource_secrets = readJSON(text: readJSON(text: resource_output).SecretString)
+        def aws_secrets = getSecret(SECRET_URL, AWS_REGION)
+        def eks_secrets = getSecret(EKS_SECRET_URL, AWS_REGION)
+        def resource_secrets = getSecret(RESOURCE_SECRETS_URL, AWS_REGION)
 
         KMS_KEY = eks_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
@@ -67,6 +63,8 @@ pipeline {
         USERS_IMAGE = "$repo_host/$users_repo:$users_tag"
         FLIGHTS_IMAGE = "$repo_host/$flights_repo:$flight_tag"
         BOOKINGS_IMAGE = "$repo_host/$bookings_repo:$bookings_tag"
+
+        ELK_URL = "ap-elk.hitec.link"
     }
 
     stages {
@@ -77,8 +75,7 @@ pipeline {
 
         // Conditional deployment
         stage('Deploy EKS') { when { expression { params.Deploy && params.Service == 'all' }}
-            steps {
-                script{
+            steps { script {
                 def cluster_status = "$EKSCTL_CMD get cluster --region $AWS_REGION | grep -q $CLUSTER_NAME"
                 def status = sh(returnStatus: true, script: cluster_status )
                 if (status == 0) {
@@ -111,11 +108,9 @@ pipeline {
                 sh(script: 'envsubst < deployments.yml | kubectl apply -f -')
                 sh(script: 'kubectl apply -f services.yml')
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
+                sh(script: 'envsubst < fluent-bit.yml | kubectl apply -f -')
 
-                script { ansibleTower(
-                    towerServer: "Shared Ansible Tower",
-                    jobTemplate: "Angel EKS Route53"
-                )}
+                updateR53();
             }
         }}
         stage('Restart Deployment') { when { expression { params.Deploy && params.Service != 'all' && params.Service != 'ingress' }}
@@ -143,11 +138,7 @@ pipeline {
 
             dir(path: './eks-context') {
                 sh(script: "envsubst < ingress.yml | kubectl apply -f -")
-
-                script { ansibleTower(
-                    towerServer: "Shared Ansible Tower",
-                    jobTemplate: "Angel EKS Route53"
-                )}
+                updateR53()
             }
         }}
 
@@ -166,5 +157,50 @@ pipeline {
                 sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
             }
         }}
+    }
+}
+
+// --- --- Jenkins Methods --- ----
+def getSecret(url, region) {
+    def script = "aws secretsmanager get-secret-value --secret-id $url --region $region"
+    def secret_value = sh(returnStdout: true, script: script)
+    def secret_string = readJSON(text: secret_value).SecretString
+    def secret_json = readJSON(text: secret_string)
+
+    return secret_json;
+}
+
+def updateR53() {
+    echo(message: 'Updating Route 53 records function!')
+
+    def terraform_secret = getSecret(TERRAFORM_URL, AWS_REGION)
+
+    def zoneId = terraform_secret["route53_zone_id"].toString();
+    def record = terraform_secret["eks_url"].toString();
+
+    def get_r53_script = """
+        aws route53 list-resource-record-sets \
+            --hosted-zone-id ${zoneId} \
+            --query 'ResourceRecordSets[?Name == `${record}.`]' | jq -r .[].ResourceRecords[].Value"""
+    def current_r53_record = sh(returnStdout: true, script: get_r53_script)
+
+    String get_eks_lb = "";
+    while (get_eks_lb.equals("")) {
+        echo(message: 'Trying to get load balancer and update r53...')
+
+        get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}'").trim()
+        def lb_status = sh(returnStatus: true, script: "echo '${get_eks_lb}' | grep 'Error from server (NotFound)'")
+
+        if (lb_status == 1 && get_eks_lb != "") {
+            sh(script: """
+            aws route53 change-resource-record-sets \
+                --hosted-zone-id ${zoneId} \
+                --change-batch '{"Changes": [{"Action": "UPSERT","ResourceRecordSet": {"Name": "'${record}'","Type": "CNAME","TTL": 300,"ResourceRecords": [{ "Value": "'${get_eks_lb}'" }]}}]}'
+            """)
+        } else {
+            get_eks_lb = ""
+        }
+
+        sleep(time: 1, unit: 'SECONDS')
     }
 }
