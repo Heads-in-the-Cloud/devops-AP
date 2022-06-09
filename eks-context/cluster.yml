@@ -6,9 +6,13 @@ metadata:
   region: ${AWS_REGION}
   version: "1.21"
 
+cloudWatch:
+  clusterLogging:
+    enableTypes: ["*"]
+
 iam:
   vpcResourceControllerPolicy: true
-  withOIDC: false
+  withOIDC: true
 
 vpc:
   id: ${VPC_ID}

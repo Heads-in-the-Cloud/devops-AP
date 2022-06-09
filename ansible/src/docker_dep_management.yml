@@ -1,0 +1,51 @@
+---
+- hosts: jenkins
+  gather_facts: yes
+  become: yes
+
+  tasks:
+    - name: Check if docker is installed properly
+      stat:
+        path: "{{ docker_path }}"
+      register: is_installed
+
+    - name: Get current version of docker compose
+      shell: "{{ docker_path }} version | grep -Po '(?<=Cloud integration: )(.*)'"
+      register: installed_version
+      when: is_installed.stat.exists
+
+    - debug:
+        msg: "{{ installed_version.stdout }}"
+      when: is_installed.stat.exists
+
+    - debug:
+        msg: No need to upgrade since version matches specification.
+      when: is_installed.stat.exists and installed_version.stdout == docker_version
+
+    - block:
+      - debug:
+          msg: Installing docker compose!
+      - yum:
+          name: docker
+          state: present
+      - name: reload systemctl daemon
+        systemd:
+          daemon_reload: yes
+      - name: start docker service
+        service:
+          name: docker
+          state: started
+      - name: install docker compose v2
+        shell: |
+          export PATH=/usr/local/bin:$PATH
+          curl -L https://raw.githubusercontent.com/docker/compose-cli/main/scripts/install/install_linux.sh | sh
+      when: is_installed.stat.exists == false
+
+    - block:
+      - debug:
+          msg: Upgrading docker compose!
+      - get_url:
+          url: "https://github.com/docker/compose-cli/releases/download/{{docker_version}}/docker-linux-amd64"
+          dest: "{{ docker_path }}"
+          mode: 775
+      when: is_installed.stat.exists == false or installed_version.stdout != docker_version

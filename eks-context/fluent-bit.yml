@@ -19,7 +19,7 @@ data:
       Host  $ELK_URL
       Port  9200
       Logstash_Format     On
-      Logstash_Prefix_Key kubernetes['pod_name']
+      Logstash_Prefix_Key kubernetes['labels']['app.kubernetes.io/name']
       Replace_Dots        On
       Retry_Limit         False
       tls                 On

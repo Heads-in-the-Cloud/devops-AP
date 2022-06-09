@@ -30,6 +30,7 @@ pipeline {
         def aws_secrets = getSecret(SECRET_URL, AWS_REGION)
         def eks_secrets = getSecret(EKS_SECRET_URL, AWS_REGION)
         def resource_secrets = getSecret(RESOURCE_SECRETS_URL, AWS_REGION)
+        def terraform_secrets = getSecret(TERRAFORM_URL, AWS_REGION)
 
         KMS_KEY = eks_secrets['KMS_KEY'].toString()
         KMS_DECRYPT = "/usr/local/bin/kms-decrypt.sh $KMS_KEY"
@@ -48,6 +49,9 @@ pipeline {
         PRIVATE_SUBNET_1 = resource_secrets["PRIVATE_SUBNET_IDS"][0].toString()
         PRIVATE_SUBNET_2 = resource_secrets["PRIVATE_SUBNET_IDS"][1].toString()
         PRIVATE_SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
+
+        ACCOUNT_ID = terraform_secrets["aws_user_id"].toString()
+        RANDOM_ID = "123456789"
 
         // --- Image Repository Details
         def repo_host = aws_secrets["AP-Repo-Host"].toString()
@@ -110,6 +114,13 @@ pipeline {
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
                 sh(script: 'envsubst < fluent-bit.yml | kubectl apply -f -')
 
+                sh(script: """aws iam create-policy \
+                    --policy-name eks-fargate-logging-policy \
+                    --policy-document file://permissions.json""")
+                sh(script: """aws iam attach-role-policy \
+                    --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
+                    --role-name eksctl-$CLUSTER_NAME-cluste-FargatePodExecutionRole-$RANDOM_ID""")
+
                 updateR53();
             }
         }}
@@ -154,6 +165,10 @@ pipeline {
 
             dir(path: './eks-context') {
                 echo(message: 'Taking Down Messages!')
+                sh(script: """aws iam detach-role-policy \
+                    --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
+                    --role-name eksctl-ootb-cluster-cluste-FargatePodExecutionRole-$RANDOM_ID""")
+
                 sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
             }
         }}
