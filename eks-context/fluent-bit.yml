@@ -14,15 +14,15 @@ metadata:
 data:
   output.conf: |
     [OUTPUT]
-      Name  es
-      Match *
-      Host  $ELK_URL
-      Port  9200
-      Logstash_Format     On
-      Logstash_Prefix_Key kubernetes['labels']['app.kubernetes.io/name']
-      Replace_Dots        On
-      Retry_Limit         False
-      tls                 On
+      Name                  es
+      Match                 *
+      Host                  $ELK_URL
+      Port                  9200
+      Logstash_Format       On
+      Logstash_Prefix_Key   kubernetes['labels']['app.kubernetes.io/name']
+      Replace_Dots          On
+      Retry_Limit           False
+      tls                   On
 
   parsers.conf: |
     [PARSER]
@@ -34,11 +34,7 @@ data:
 
   filters.conf: |
     [FILTER]
-      Name                  kubernetes
+      Name                  parser
       Match                 *
-      Merge_Log             On
-      Merge_Log_Key         log_processed
-      K8S-Logging.Parser    On
-      Merge_Parser          spring
-      Buffer_Size           0
-      Kube_Meta_Cache_TTL   300s
+      Key_name              log
+      Parser                spring
