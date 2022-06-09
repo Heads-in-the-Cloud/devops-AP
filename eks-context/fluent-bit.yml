@@ -12,27 +12,58 @@ metadata:
   name: aws-logging
   namespace: aws-observability
 data:
+  # output.conf: |
+  #   [OUTPUT]
+  #     Name                cloudwatch_logs
+  #     Match               *
+  #     region              us-east-2
+  #     log_group_name      /eks/ap-logs/dev
+  #     log_stream_prefix   kubernetes['labels']['app.kubernetes.io/name']
+  #     auto_create_group   true
+  #     log_key log
+
   output.conf: |
     [OUTPUT]
-      Name                cloudwatch_logs
+      Name                es
       Match               *
-      region              us-east-2
-      log_group_name      /eks/ap-logs/dev
-      log_stream_prefix   kubernetes['labels']['app.kubernetes.io/name']
-      auto_create_group   true
-      log_key log
+      Host                $ELK_URL
+      Port                9200
+      Logstash_Format     On
+      Logstash_Prefix_Key kubernetes['labels']['app.kubernetes.io/name']
+      Replace_Dots        On
+      Retry_Limit         False
+      tls                 On
+
+  # parsers.conf: |
+  #   [PARSER]
+  #     Name                  spring
+  #     Format                regex
+  #     Regex                 ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>P|F) (?<log>.*)$
+  #     Time_Key              time
+  #     Time_Format           %Y-%m-%dT%H:%M:%S.%L%z
+
+  # filters.conf: |
+  #   [FILTER]
+  #     Name parser
+  #     Match *
+  #     Key_name log
+  #     Parser spring
 
   parsers.conf: |
     [PARSER]
-      Name                  spring
-      Format                regex
-      Regex                 ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>P|F) (?<log>.*)$
-      Time_Key              time
-      Time_Format           %Y-%m-%dT%H:%M:%S.%L%z
+      Name        spring
+      Format      regex
+      Regex       ^(?<time>[0-9]+-[0-9]+-[0-9]+\s+[0-9]+:[0-9]+:[0-9]+.[0-9]+)\s+(?<log_level>[Aa]lert|ALERT|[Tt]race|TRACE|[Dd]ebug|DEBUG|[Nn]otice|NOTICE|[Ii]nfo|INFO|[Ww]arn?(?:ing)?|WARN?(?:ING)?|[Ee]rr?(?:or)?|ERR?(?:OR)?|[Cc]rit?(?:ical)?|CRIT?(?:ICAL)?|[Ff]atal|FATAL|[Ss]evere|SEVERE|EMERG(?:ENCY)?|[Ee]merg(?:ency)?)\s+(?<pid>[0-9]+)\s+---\s+(?<message>.*)$
+      Time_Key    time
+      Time_Format %Y-%m-%dT%H %M:%S.%L
 
   filters.conf: |
     [FILTER]
-      Name parser
-      Match *
-      Key_name log
-      Parser spring
+      Name                kubernetes
+      Match               kube.*
+      Merge_Log           On
+      Merge_Log_Key       log_processed
+      K8S-Logging.Parser  On
+      Merge_Parser        spring
+      Buffer_Size         0
+      Kube_Meta_Cache_TTL 300s
