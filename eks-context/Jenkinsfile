@@ -115,7 +115,7 @@ pipeline {
 
                 // Attaching IAM Roles:
                 script {
-                    sh(script: """aws iam create-policy \
+                    sh(returnStatus: true, script: """aws iam create-policy \
                         --policy-name eks-fargate-logging-policy \
                         --policy-document file://permissions.json""")
 
@@ -174,9 +174,19 @@ pipeline {
 
             dir(path: './eks-context') {
                 echo(message: 'Taking Down Messages!')
-                sh(script: """aws iam detach-role-policy \
-                    --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
-                    --role-name eksctl-ootb-cluster-cluste-FargatePodExecutionRole-$RANDOM_ID""")
+
+                script {
+                    def role_name = sh(returnStdout: true, script: """aws eks describe-fargate-profile \
+                        --cluster-name $CLUSTER_NAME \
+                        --region $AWS_REGION \
+                        --fargate-profile-name ap-fargate \
+                        --query 'fargateProfile.podExecutionRoleArn' | grep -Po '(?<=/).*(?=\")'""")
+
+                    sh(script: """aws iam detach-role-policy \
+                        --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
+                        --role-name $role_name""")
+                }
+
 
                 sh(script: "$EKSCTL_CMD delete cluster --name $CLUSTER_NAME --region $AWS_REGION")
             }
