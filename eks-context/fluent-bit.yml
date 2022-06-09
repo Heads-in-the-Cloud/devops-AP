@@ -42,12 +42,12 @@ data:
   #     Time_Key              time
   #     Time_Format           %Y-%m-%dT%H:%M:%S.%L%z
 
-  # filters.conf: |
-  #   [FILTER]
-  #     Name parser
-  #     Match *
-  #     Key_name log
-  #     Parser spring
+  filters.conf: |
+    [FILTER]
+      Name parser
+      Match *
+      Key_name log
+      Parser spring
 
   parsers.conf: |
     [PARSER]
@@ -56,14 +56,3 @@ data:
       Regex       ^(?<time>[0-9]+-[0-9]+-[0-9]+\s+[0-9]+:[0-9]+:[0-9]+.[0-9]+)\s+(?<log_level>[Aa]lert|ALERT|[Tt]race|TRACE|[Dd]ebug|DEBUG|[Nn]otice|NOTICE|[Ii]nfo|INFO|[Ww]arn?(?:ing)?|WARN?(?:ING)?|[Ee]rr?(?:or)?|ERR?(?:OR)?|[Cc]rit?(?:ical)?|CRIT?(?:ICAL)?|[Ff]atal|FATAL|[Ss]evere|SEVERE|EMERG(?:ENCY)?|[Ee]merg(?:ency)?)\s+(?<pid>[0-9]+)\s+---\s+(?<message>.*)$
       Time_Key    time
       Time_Format %Y-%m-%dT%H %M:%S.%L
-
-  filters.conf: |
-    [FILTER]
-      Name                kubernetes
-      Match               kube.*
-      Merge_Log           On
-      Merge_Log_Key       log_processed
-      K8S-Logging.Parser  On
-      Merge_Parser        spring
-      Buffer_Size         0
-      Kube_Meta_Cache_TTL 300s
