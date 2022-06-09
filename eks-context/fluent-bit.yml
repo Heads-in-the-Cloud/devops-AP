@@ -19,7 +19,7 @@ data:
       region              us-east-2
       log_group_name      ap-eks-fluent-bit
       log_stream_prefix   ap-eks-
-      auto_create_group   On
+      auto_create_group   true
       log_key log
 
   parsers.conf: |
