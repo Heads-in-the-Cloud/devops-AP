@@ -123,7 +123,7 @@ pipeline {
                         --cluster-name $CLUSTER_NAME \
                         --region $AWS_REGION \
                         --fargate-profile-name ap-fargate \
-                        --query 'fargateProfile.podExecutionRoleArn' | grep -Po '(?<=\/).*(?=\")'""")
+                        --query 'fargateProfile.podExecutionRoleArn' | grep -Po '(?<=/).*(?=\")'""")
 
                     sh(script: """aws iam attach-role-policy \
                         --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
