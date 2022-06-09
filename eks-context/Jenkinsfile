@@ -222,7 +222,7 @@ def updateR53() {
     while (get_eks_lb.equals("")) {
         echo(message: 'Trying to get load balancer and update r53...')
 
-        get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}'").trim()
+        get_eks_lb = sh(returnStdout: true, script: "kubectl get ingress eks-ingress -n $NAMESPACE -o go-template='{{range.status.loadBalancer.ingress}}{{.hostname}}{{end}}'").trim()
         def lb_status = sh(returnStatus: true, script: "echo '${get_eks_lb}' | grep 'Error from server (NotFound)'")
 
         if (lb_status == 1 && get_eks_lb != "") {
