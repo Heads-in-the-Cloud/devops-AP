@@ -51,7 +51,6 @@ pipeline {
         PRIVATE_SUBNET_3 = resource_secrets["PRIVATE_SUBNET_IDS"][2].toString()
 
         ACCOUNT_ID = terraform_secrets["aws_user_id"].toString()
-        RANDOM_ID = "123456789"
 
         // --- Image Repository Details
         def repo_host = aws_secrets["AP-Repo-Host"].toString()
@@ -114,12 +113,22 @@ pipeline {
                 sh(script: 'envsubst < ingress.yml | kubectl apply -f -')
                 sh(script: 'envsubst < fluent-bit.yml | kubectl apply -f -')
 
-                sh(script: """aws iam create-policy \
-                    --policy-name eks-fargate-logging-policy \
-                    --policy-document file://permissions.json""")
-                sh(script: """aws iam attach-role-policy \
-                    --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
-                    --role-name eksctl-$CLUSTER_NAME-cluste-FargatePodExecutionRole-$RANDOM_ID""")
+                // Attaching IAM Roles:
+                script {
+                    sh(script: """aws iam create-policy \
+                        --policy-name eks-fargate-logging-policy \
+                        --policy-document file://permissions.json""")
+
+                    def role_name = sh(returnStdout: true, script: """aws eks describe-fargate-profile \
+                        --cluster-name $CLUSTER_NAME \
+                        --region $AWS_REGION \
+                        --fargate-profile-name ap-fargate \
+                        --query 'fargateProfile.podExecutionRoleArn' | grep -Po '(?<=\/).*(?=\")'""")
+
+                    sh(script: """aws iam attach-role-policy \
+                        --policy-arn arn:aws:iam::$ACCOUNT_ID:policy/eks-fargate-logging-policy \
+                        --role-name $role_name""")
+                }
 
                 updateR53();
             }
