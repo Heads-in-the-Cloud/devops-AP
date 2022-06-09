@@ -28,7 +28,7 @@ data:
     [PARSER]
       Name                  spring
       Format                regex
-      Regex                 ^(?<aws>.* F)\s+(?<time>\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}.\d{3})\s+(?<level>[^\s]+)\s+(?<pid>\d+).*?\[(?<thread>.*)\]\s+(?<class>.*)\s+:\s+(?<message>.*)
+      Regex                 (?<time>\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}:\d{1,2}.\d{3})\s+(?<level>[^\s]+)\s+(?<pid>\d+).*?\[(?<thread>.*)\]\s+(?<class>.*)\s+:\s+(?<message>.*)
       Time_Key              time
       Time_Format           %Y-%m-%dT%H:%M:%S.%L%z
 
