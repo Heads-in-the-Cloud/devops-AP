@@ -29,6 +29,8 @@ data:
       Host                $ELK_URL
       Port                443
       Path                /elasticsearch
+      HTTP_User           user
+      HTTP_Passwd         XcTLtM60jf9A
       Logstash_Format     On
       Logstash_Prefix_Key kubernetes['labels']['app.kubernetes.io/name']
       Replace_Dots        On
